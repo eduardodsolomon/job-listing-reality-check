@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import VerificationPanel from "@/components/verification-panel";
+
 import {
   analyzeListing,
   type AnalysisInput,
@@ -253,6 +255,8 @@ export default function ListingAnalyzer() {
           </button>
         </div>
       </form>
+
+      <VerificationPanel listingUrl={form.listingUrl} />
 
       {result && (
         <section
