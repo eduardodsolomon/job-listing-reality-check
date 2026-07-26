@@ -22,9 +22,11 @@ export default function Home() {
           </p>
 
           <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
-            This prototype performs a text-based screening only. It does
-            not yet verify the position on the employer’s official website
-            and does not prove that a company intended to deceive applicants.
+            This prototype performs text-based screening and on-demand URL
+            verification. Greenhouse and Lever postings can be checked
+            through their public job endpoints. Other websites receive a
+            limited reachability and structured-data check. Results do not
+            prove employer intent.
           </div>
         </header>
 
