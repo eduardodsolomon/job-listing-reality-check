@@ -95,12 +95,15 @@ export default function ListingAnalyzer() {
   const [form, setForm] = useState<AnalysisInput>(emptyForm);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  function updateField(field: keyof AnalysisInput, value: string) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
+  function updateField(
+  field: keyof AnalysisInput,
+  value: string,
+) {
+  setForm((current: AnalysisInput) => ({
+    ...current,
+    [field]: value,
+  }));
+}
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
