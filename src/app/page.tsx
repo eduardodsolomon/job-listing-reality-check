@@ -1,5 +1,7 @@
 import ListingAnalyzer from "@/components/listing-analyzer";
 
+import { RULESET_VERSION } from "@/rules";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50">
@@ -29,8 +31,7 @@ export default function Home() {
         <ListingAnalyzer />
 
         <footer className="mt-12 border-t border-slate-200 pt-6 text-sm leading-6 text-slate-600">
-          Prototype methodology version 0.1. Results describe risk signals
-          and verification gaps, not statistical probabilities.
+          Methodology version {RULESET_VERSION}. Results describe risk signals and verification gaps, not statistical probabilities.
         </footer>
       </div>
     </main>

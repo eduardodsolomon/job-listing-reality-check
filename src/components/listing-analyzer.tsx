@@ -7,7 +7,9 @@ import {
   analyzeListing,
   type AnalysisInput,
   type AnalysisResult,
+  type ConfidenceLabel,
   type RiskLabel,
+  type Signal,
   type SignalType,
 } from "@/lib/analyze-listing";
 
@@ -18,7 +20,9 @@ const emptyForm: AnalysisInput = {
   recruiterMessage: "",
 };
 
-function riskCardClasses(label: RiskLabel): string {
+function riskCardClasses(
+  label: RiskLabel | ConfidenceLabel,
+): string {
   switch (label) {
     case "Critical":
       return "border-red-300 bg-red-50";
@@ -42,10 +46,22 @@ function signalClasses(type: SignalType): string {
   }
 }
 
+function signalImpactText(signal: Signal): string {
+  if (signal.target === "confidence") {
+    return `+${signal.points} confidence points`;
+  }
+
+  if (signal.target === "ghost") {
+    return `+${signal.points} ghost-risk points`;
+  }
+
+  return `+${signal.points} scam-risk points`;
+}
+
 interface RiskCardProps {
   title: string;
   score: number;
-  label: RiskLabel;
+  label: RiskLabel | ConfidenceLabel;
   description: string;
 }
 
@@ -292,11 +308,11 @@ export default function ListingAnalyzer() {
                       {signal.title}
                     </h3>
 
-                    {signal.points > 0 && (
-                      <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-700">
-                        +{signal.points} risk points
-                      </span>
-                    )}
+                    <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-700">
+                        {signalImpactText(signal)}
+                    </span>
+
+
                   </div>
 
                   <p className="mt-2 text-sm leading-6 text-slate-700">
