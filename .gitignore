@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Local patch and backup artifacts
+*.bak
+*.v*.bak
+*.orig
+*~
+apply_version*.py
+apply_version*.mjs
+apply_*fix*.py
+apply_*fix*.mjs
+apply_test*.py
+apply_test*.mjs
+# Generated build and test output
+.next/
+coverage/
+__pycache__/
+.pytest_cache/
+.turbo/
