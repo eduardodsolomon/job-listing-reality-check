@@ -310,6 +310,10 @@ function MetricCard({
                 <span className="text-4xl font-black text-slate-950">
                   {metric.score}
                 </span>
+
+                <span className="pb-1 text-base font-bold text-slate-700">
+                  out of 100
+                </span>
               </div>
 
               <div
@@ -395,6 +399,10 @@ export default function JobHealthDashboard({
                 {profile.overallScore}
               </span>
 
+              <span className="text-base font-bold text-slate-700">
+                out of 100
+              </span>
+
               <span
                 className={`mt-3 rounded-full border-2 px-4 py-1 text-base font-black ${tone.badge}`}
               >
@@ -405,6 +413,9 @@ export default function JobHealthDashboard({
         </div>
 
         <div>
+          <p className="text-base font-black uppercase tracking-widest text-violet-800">
+            Summary average
+          </p>
 
           <h2
             id="job-health-heading"
