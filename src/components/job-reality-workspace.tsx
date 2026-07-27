@@ -6,10 +6,22 @@ import {
 
 import BatchAnalyzer from "@/components/batch-analyzer";
 import ListingAnalyzer from "@/components/listing-analyzer";
+import TrendsDashboard from "@/components/trends-dashboard";
 
 type WorkspaceMode =
   | "single"
-  | "batch";
+  | "batch"
+  | "trends";
+
+function tabClasses(
+  selected: boolean,
+): string {
+  return `min-h-14 rounded-2xl px-5 py-3 text-lg font-black ${
+    selected
+      ? "bg-violet-800 text-white"
+      : "bg-slate-100 text-slate-950 hover:bg-slate-200"
+  }`;
+}
 
 export default function JobRealityWorkspace() {
   const [mode, setMode] =
@@ -21,8 +33,8 @@ export default function JobRealityWorkspace() {
     <div>
       <div
         role="tablist"
-        aria-label="Analysis mode"
-        className="mb-8 grid gap-3 rounded-[2rem] border-2 border-slate-300 bg-white p-3 shadow-lg sm:grid-cols-2"
+        aria-label="Job Reality Check workspace"
+        className="mb-8 grid gap-3 rounded-[2rem] border-2 border-slate-300 bg-white p-3 shadow-lg sm:grid-cols-3"
       >
         <button
           type="button"
@@ -33,11 +45,9 @@ export default function JobRealityWorkspace() {
           onClick={() => {
             setMode("single");
           }}
-          className={`min-h-14 rounded-2xl px-5 py-3 text-lg font-black ${
-            mode === "single"
-              ? "bg-violet-800 text-white"
-              : "bg-slate-100 text-slate-900"
-          }`}
+          className={tabClasses(
+            mode === "single",
+          )}
         >
           Check one job
         </button>
@@ -51,20 +61,40 @@ export default function JobRealityWorkspace() {
           onClick={() => {
             setMode("batch");
           }}
-          className={`min-h-14 rounded-2xl px-5 py-3 text-lg font-black ${
-            mode === "batch"
-              ? "bg-violet-800 text-white"
-              : "bg-slate-100 text-slate-900"
-          }`}
+          className={tabClasses(
+            mode === "batch",
+          )}
         >
           Check up to 25 jobs
         </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={
+            mode === "trends"
+          }
+          onClick={() => {
+            setMode("trends");
+          }}
+          className={tabClasses(
+            mode === "trends",
+          )}
+        >
+          View aggregate trends
+        </button>
       </div>
 
-      {mode === "single" ? (
+      {mode === "single" && (
         <ListingAnalyzer />
-      ) : (
+      )}
+
+      {mode === "batch" && (
         <BatchAnalyzer />
+      )}
+
+      {mode === "trends" && (
+        <TrendsDashboard />
       )}
     </div>
   );
