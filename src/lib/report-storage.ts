@@ -1,69 +1,61 @@
-import {
-  SAVED_REPORT_SCHEMA_VERSION,
-  type SavedReport,
-  type SavedReportDraft,
+import type {
+  SavedReport,
+  SavedReportDraft,
 } from "./saved-report-types";
 
 export const REPORT_STORAGE_KEY =
-  "job-listing-reality-check:saved-reports:v1";
+  "job-listing-reality-check:reports";
 
-export const MAX_SAVED_REPORTS = 25;
+export const MAX_SAVED_REPORTS =
+  25;
 
 export interface StorageLike {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
+  getItem(
+    key: string,
+  ): string | null;
+
+  setItem(
+    key: string,
+    value: string,
+  ): void;
+
+  removeItem(
+    key: string,
+  ): void;
 }
 
-interface CreateSavedReportOptions {
-  id?: string;
-  savedAt?: string;
-}
-
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
-}
-
-function resolveStorage(
-  storage?: StorageLike | null,
-): StorageLike | null {
-  if (storage !== undefined) {
-    return storage;
-  }
-
-  if (typeof window === "undefined") {
+function browserStorage():
+  StorageLike | null {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
     return null;
   }
 
   return window.localStorage;
 }
 
-function generateReportId(): string {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-
-  return [
-    Date.now().toString(36),
-    Math.random().toString(36).slice(2, 10),
-  ].join("-");
+function isRecord(
+  value: unknown,
+): value is Record<
+  string,
+  unknown
+> {
+  return (
+    typeof value ===
+      "object" &&
+    value !== null
+  );
 }
 
-function parsedDate(value: string): number {
-  const timestamp = Date.parse(value);
-
-  return Number.isNaN(timestamp)
-    ? 0
-    : timestamp;
+function isNullableRecord(
+  value: unknown,
+): boolean {
+  return (
+    value === null ||
+    isRecord(value)
+  );
 }
 
 export function isSavedReport(
@@ -74,76 +66,114 @@ export function isSavedReport(
   }
 
   return (
-    value.schemaVersion ===
-      SAVED_REPORT_SCHEMA_VERSION &&
-    typeof value.id === "string" &&
-    value.id.length > 0 &&
-    typeof value.savedAt === "string" &&
+    typeof value.id ===
+      "string" &&
+    typeof value.savedAt ===
+      "string" &&
     isRecord(value.form) &&
-    isRecord(value.analysisResult) &&
-    isRecord(value.verificationResult) &&
-    isRecord(value.reconciliationResult)
+    typeof value.form
+      .listingText ===
+      "string" &&
+    isRecord(
+      value.analysisResult,
+    ) &&
+    typeof value.analysisResult
+      .ghostRisk ===
+      "number" &&
+    typeof value.analysisResult
+      .scamRisk ===
+      "number" &&
+    isNullableRecord(
+      value.verificationResult,
+    ) &&
+    isNullableRecord(
+      value.reconciliationResult,
+    )
   );
+}
+
+function createId(): string {
+  if (
+    typeof globalThis.crypto
+      ?.randomUUID ===
+    "function"
+  ) {
+    return globalThis.crypto
+      .randomUUID();
+  }
+
+  return [
+    Date.now(),
+    Math.random()
+      .toString(16)
+      .slice(2),
+  ].join("-");
+}
+
+export interface SavedReportOverrides {
+  id?: string;
+  savedAt?: string;
 }
 
 export function createSavedReport(
   draft: SavedReportDraft,
-  options: CreateSavedReportOptions = {},
+  overrides:
+    | SavedReportOverrides
+    | Date = {},
 ): SavedReport {
+  if (overrides instanceof Date) {
+    return {
+      ...draft,
+      id: createId(),
+      savedAt:
+        overrides.toISOString(),
+    };
+  }
+
   return {
-    schemaVersion:
-      SAVED_REPORT_SCHEMA_VERSION,
+    ...draft,
     id:
-      options.id ??
-      generateReportId(),
+      overrides.id ??
+      createId(),
     savedAt:
-      options.savedAt ??
+      overrides.savedAt ??
       new Date().toISOString(),
-    form: draft.form,
-    analysisResult:
-      draft.analysisResult,
-    verificationResult:
-      draft.verificationResult,
-    reconciliationResult:
-      draft.reconciliationResult,
   };
 }
 
 export function loadSavedReports(
-  storage?: StorageLike | null,
+  storage:
+    StorageLike | null =
+      browserStorage(),
 ): SavedReport[] {
-  const resolvedStorage =
-    resolveStorage(storage);
+  if (!storage) {
+    return [];
+  }
 
-  if (!resolvedStorage) {
+  const raw =
+    storage.getItem(
+      REPORT_STORAGE_KEY,
+    );
+
+  if (!raw) {
     return [];
   }
 
   try {
-    const storedValue =
-      resolvedStorage.getItem(
-        REPORT_STORAGE_KEY,
-      );
+    const parsed:
+      unknown =
+        JSON.parse(raw);
 
-    if (!storedValue) {
+    if (!Array.isArray(parsed)) {
       return [];
     }
 
-    const parsedValue: unknown =
-      JSON.parse(storedValue);
-
-    if (!Array.isArray(parsedValue)) {
-      return [];
-    }
-
-    return parsedValue
+    return parsed
       .filter(isSavedReport)
-      .sort(
-        (first, second) =>
-          parsedDate(second.savedAt) -
-          parsedDate(first.savedAt),
-      )
-      .slice(0, MAX_SAVED_REPORTS);
+      .slice(
+        0,
+        MAX_SAVED_REPORTS,
+      );
   } catch {
     return [];
   }
@@ -151,90 +181,96 @@ export function loadSavedReports(
 
 export function saveSavedReport(
   report: SavedReport,
-  storage?: StorageLike | null,
+  storage:
+    StorageLike | null =
+      browserStorage(),
 ): SavedReport[] {
-  const resolvedStorage =
-    resolveStorage(storage);
-
-  if (!resolvedStorage) {
+  if (!storage) {
     throw new Error(
-      "Browser storage is not available.",
+      "Browser storage is unavailable.",
     );
   }
 
-  const existingReports =
-    loadSavedReports(resolvedStorage);
+  const existing =
+    loadSavedReports(
+      storage,
+    ).filter(
+      (item) =>
+        item.id !== report.id,
+    );
 
-  const nextReports = [
+  const updated = [
     report,
-    ...existingReports.filter(
-      (existingReport) =>
-        existingReport.id !== report.id,
-    ),
-  ]
-    .sort(
-      (first, second) =>
-        parsedDate(second.savedAt) -
-        parsedDate(first.savedAt),
-    )
-    .slice(0, MAX_SAVED_REPORTS);
-
-  resolvedStorage.setItem(
-    REPORT_STORAGE_KEY,
-    JSON.stringify(nextReports),
+    ...existing,
+  ].slice(
+    0,
+    MAX_SAVED_REPORTS,
   );
 
-  return nextReports;
+  storage.setItem(
+    REPORT_STORAGE_KEY,
+    JSON.stringify(updated),
+  );
+
+  return updated;
 }
 
 export function deleteSavedReport(
   reportId: string,
-  storage?: StorageLike | null,
+  storage:
+    StorageLike | null =
+      browserStorage(),
 ): SavedReport[] {
-  const resolvedStorage =
-    resolveStorage(storage);
-
-  if (!resolvedStorage) {
+  if (!storage) {
     return [];
   }
 
-  const nextReports =
+  const updated =
     loadSavedReports(
-      resolvedStorage,
+      storage,
     ).filter(
       (report) =>
         report.id !== reportId,
     );
 
-  resolvedStorage.setItem(
+  storage.setItem(
     REPORT_STORAGE_KEY,
-    JSON.stringify(nextReports),
+    JSON.stringify(updated),
   );
 
-  return nextReports;
+  return updated;
 }
 
 export function clearSavedReports(
-  storage?: StorageLike | null,
+  storage:
+    StorageLike | null =
+      browserStorage(),
 ): void {
-  const resolvedStorage =
-    resolveStorage(storage);
-
-  resolvedStorage?.removeItem(
+  storage?.removeItem(
     REPORT_STORAGE_KEY,
   );
 }
 
-function safeFilenamePart(
+function safeFilename(
   value: string,
 ): string {
-  return value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
+  const normalized =
+    value
+      .trim()
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        "-",
+      )
+      .replace(
+        /^-+|-+$/g,
+        "",
+      );
+
+  return (
+    normalized ||
+    "job-report"
+  );
 }
 
 function downloadJson(
@@ -242,79 +278,66 @@ function downloadJson(
   filename: string,
 ): void {
   if (
-    typeof document === "undefined" ||
-    typeof URL === "undefined"
+    typeof document ===
+      "undefined"
   ) {
-    throw new Error(
-      "File downloads are not available.",
-    );
+    return;
   }
 
-  const jsonContent =
-    JSON.stringify(value, null, 2);
-
   const blob = new Blob(
-    [jsonContent],
+    [
+      JSON.stringify(
+        value,
+        null,
+        2,
+      ),
+    ],
     {
-      type: "application/json",
+      type:
+        "application/json;charset=utf-8",
     },
   );
 
-  const objectUrl =
+  const url =
     URL.createObjectURL(blob);
 
-  const link =
+  const anchor =
     document.createElement("a");
 
-  link.href = objectUrl;
-  link.download = filename;
+  anchor.href = url;
+  anchor.download = filename;
 
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+  document.body.appendChild(
+    anchor,
+  );
 
-  URL.revokeObjectURL(objectUrl);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }
 
 export function downloadSavedReport(
   report: SavedReport,
 ): void {
   const title =
-    report.verificationResult.title ||
+    report.verificationResult
+      ?.title ||
     report.form.company ||
-    "job-listing";
-
-  const filenameTitle =
-    safeFilenamePart(title) ||
-    "job-listing";
-
-  const savedDate =
-    report.savedAt.slice(0, 10);
+    "job-report";
 
   downloadJson(
     report,
-    `${filenameTitle}-${savedDate}-reality-check.json`,
+    `${safeFilename(
+      title,
+    )}.json`,
   );
 }
 
 export function downloadSavedReportHistory(
   reports: SavedReport[],
 ): void {
-  const exportDate =
-    new Date()
-      .toISOString()
-      .slice(0, 10);
-
   downloadJson(
-    {
-      schemaVersion:
-        SAVED_REPORT_SCHEMA_VERSION,
-      exportedAt:
-        new Date().toISOString(),
-      reportCount:
-        reports.length,
-      reports,
-    },
-    `job-listing-reality-check-history-${exportDate}.json`,
+    reports,
+    "job-reality-check-reports.json",
   );
 }

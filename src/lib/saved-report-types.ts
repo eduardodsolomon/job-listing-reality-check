@@ -3,24 +3,25 @@ import type {
   AnalysisResult,
 } from "./analysis-types";
 
-import type { ReconciliationResult } from "./reconciliation-types";
-import type { VerificationResult } from "./verification-types";
+import type {
+  ReconciliationResult,
+} from "./reconciliation-types";
 
-export const SAVED_REPORT_SCHEMA_VERSION =
-  "1.0.0" as const;
+import type {
+  VerificationResult,
+} from "./verification-types";
 
-export interface SavedReport {
-  schemaVersion:
-    typeof SAVED_REPORT_SCHEMA_VERSION;
-  id: string;
-  savedAt: string;
+export interface SavedReportDraft {
   form: AnalysisInput;
   analysisResult: AnalysisResult;
-  verificationResult: VerificationResult;
-  reconciliationResult: ReconciliationResult;
+  verificationResult:
+    VerificationResult | null;
+  reconciliationResult:
+    ReconciliationResult | null;
 }
 
-export type SavedReportDraft = Omit<
-  SavedReport,
-  "schemaVersion" | "id" | "savedAt"
->;
+export interface SavedReport
+  extends SavedReportDraft {
+  id: string;
+  savedAt: string;
+}

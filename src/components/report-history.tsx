@@ -79,7 +79,7 @@ function reportTitle(
   report: SavedReport,
 ): string {
   return (
-    report.verificationResult.title ||
+    report.verificationResult?.title ||
     report.form.company ||
     "Saved job report"
   );
@@ -133,11 +133,7 @@ export default function ReportHistory({
   const currentDraft =
     useMemo<SavedReportDraft | null>(
       () => {
-        if (
-          !analysisResult ||
-          !verificationResult ||
-          !reconciliationResult
-        ) {
+        if (!analysisResult) {
           return null;
         }
 
@@ -179,7 +175,7 @@ export default function ReportHistory({
   function saveCurrent(): void {
     if (!currentDraft) {
       setError(
-        "Run the job check and URL check before saving.",
+        "Provide a job description in order to save a report.",
       );
 
       return;
@@ -209,7 +205,7 @@ export default function ReportHistory({
   function exportCurrent(): void {
     if (!currentDraft) {
       setError(
-        "Run the job check and URL check before exporting.",
+        "Run the job check before exporting.",
       );
 
       return;
@@ -304,8 +300,7 @@ export default function ReportHistory({
 
       {!currentDraft && (
         <p className="mt-5 rounded-2xl bg-slate-100 p-5 text-base font-bold leading-7 text-slate-800">
-          Complete both the job check and
-          URL check to save a report.
+          Provide a job description in order to save a report.
         </p>
       )}
 

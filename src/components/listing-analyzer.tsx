@@ -10,6 +10,7 @@ import {
 import ActionPlan from "@/components/action-plan";
 import JobHealthDashboard from "@/components/job-health-dashboard";
 import ReportHistory from "@/components/report-history";
+import ResearchAssistantPanel from "@/components/research-assistant-panel";
 import SpecializedProfilePanel from "@/components/specialized-profile-panel";
 import VerificationPanel from "@/components/verification-panel";
 
@@ -28,6 +29,8 @@ import {
 } from "@/lib/presentation";
 
 import type { ReconciliationResult } from "@/lib/reconciliation-types";
+
+import { buildResearchTasks } from "@/lib/research-assistant";
 
 import { analyzeSpecializedProfile } from "@/lib/opportunity-analysis";
 
@@ -414,91 +417,8 @@ export default function ListingAnalyzer() {
           received.
         </p>
 
-        <div className="mt-7 grid gap-5 lg:grid-cols-2">
-          <label className="block">
-            <span className="text-lg font-black text-slate-950">
-              Type of Job
-            </span>
-
-            <span className="mt-1 block text-base text-slate-700">
-              Optional — Get more specific insights depending on the type of job
-            </span>
-
-            <select
-              value={opportunityType}
-              onChange={(event) =>
-                changeOpportunityType(
-                  event.target
-                    .value as OpportunityType,
-                )
-              }
-              className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
-            >
-              {OPPORTUNITY_TYPE_OPTIONS.map(
-                (option) => (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
-
-          {subtypeOptions.length >
-            0 && (
-            <label className="block">
-              <span className="text-lg font-black text-slate-950">
-                More specific job type
-              </span>
-
-              <span className="mt-1 block text-base text-slate-700">
-                Optional — Choose the closest match
-              </span>
-
-              <select
-                value={
-                  form.opportunitySubtype ??
-                  ""
-                }
-                onChange={(event) =>
-                  updateField(
-                    "opportunitySubtype",
-                    event.target
-                      .value as OpportunitySubtype,
-                  )
-                }
-                className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
-              >
-                <option value="">
-                  Select a more specific type
-                </option>
-
-                {subtypeOptions.map(
-                  (option) => (
-                    <option
-                      key={option.value}
-                      value={option.value}
-                    >
-                      {option.label}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-          )}
-        </div>
-
-        <label className="mt-6 block">
-          <span className="text-lg font-black text-slate-950">
-            Company Name
-          </span>
-
-          <span className="mt-1 block text-base text-slate-700">
-            Optional — Paste the name of the company and also any recruiting agencies attached to the listing
-          </span>
+<label className="mt-6 block">
+          <span className="text-lg font-black text-slate-950">Company Name</span>
 
           <input
             type="text"
@@ -509,22 +429,14 @@ export default function ListingAnalyzer() {
                 event.target.value,
               )
             }
-            placeholder="Example Health"
+            placeholder="Optional — Example: Example Health; recruiting agency: Talent Partners"
             className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
           />
         </label>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <label className="block">
-            <span className="text-lg font-black text-slate-950">
-              Job Description and any additional context
-            </span>
-
-            <span className="mt-1 block text-base text-slate-700">
-              Paste the complete posting
-              from the employer’s official
-              careers website when available
-            </span>
+            <span className="text-lg font-black text-slate-950">Job Description and any additional context <span aria-hidden="true" className="text-red-700">*</span><span className="sr-only"> required</span></span>
 
             <textarea
               value={form.listingText}
@@ -534,23 +446,89 @@ export default function ListingAnalyzer() {
                   event.target.value,
                 )
               }
-              placeholder="Paste the job listing here..."
+              placeholder="Required — Paste as much information about the listing as you can find. Example: job title, company, pay, location, schedule, duties, qualifications, benefits, job number, and application instructions."
+              required
               className="mt-2 min-h-96 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
             />
           </label>
 
           <div>
-            <label className="block">
-              <span className="text-lg font-black text-slate-950">
-                Recruiter message
-              </span>
+            
+    <div className="mt-7 grid gap-5 lg:grid-cols-2">
+              <label className="block">
+                <span className="text-lg font-black text-slate-950">
+                  Type of Job
+                </span>
+    
+                <select
+                  value={opportunityType}
+                  onChange={(event) =>
+                    changeOpportunityType(
+                      event.target
+                        .value as OpportunityType,
+                    )
+                  }
+                  className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+                >
+                  {OPPORTUNITY_TYPE_OPTIONS.map(
+                    (option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {`Optional — ${option.label}`}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+    
+              {subtypeOptions.length >
+                0 && (
+                <label className="block">
+                  <span className="text-lg font-black text-slate-950">
+                    More specific job type
+                  </span>
+    
+                  <span className="mt-1 block text-base text-slate-700">
+                    Optional — Choose the closest match
+                  </span>
+    
+                  <select
+                    value={
+                      form.opportunitySubtype ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "opportunitySubtype",
+                        event.target
+                          .value as OpportunitySubtype,
+                      )
+                    }
+                    className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+                  >
+                    <option value="">
+                      Select a more specific type
+                    </option>
+    
+                    {subtypeOptions.map(
+                      (option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              )}
+            </div>
 
-              <span className="mt-1 block text-base text-slate-700">
-                Paste the email, text,
-                direct message, or answers
-                from the recruiter or hiring
-                manager
-              </span>
+            <label className="block">
+              <span className="text-lg font-black text-slate-950">Recruiter message</span>
 
               <textarea
                 value={
@@ -562,19 +540,13 @@ export default function ListingAnalyzer() {
                     event.target.value,
                   )
                 }
-                placeholder="Paste the recruiter message here..."
+                placeholder="Optional — Example: recruiter email, text, LinkedIn message, agency name, contact details, interview details, or follow-up answers."
                 className="mt-2 min-h-64 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
               />
             </label>
 
             <label className="mt-6 block">
-              <span className="text-lg font-black text-slate-950">
-                Official Job URL
-              </span>
-
-              <span className="mt-1 block text-base text-slate-700">
-                Optional — For best results, find the official company website’s job listing
-              </span>
+              <span className="text-lg font-black text-slate-950">Job URL</span>
 
               <input
                 type="url"
@@ -585,7 +557,7 @@ export default function ListingAnalyzer() {
                     event.target.value,
                   )
                 }
-                placeholder="https://example.com/jobs/123"
+                placeholder="Optional, but highly recommended — Example: https://organization.org/careers/job-123"
                 className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200"
               />
             </label>
@@ -694,6 +666,15 @@ export default function ListingAnalyzer() {
           <ActionPlan
             groups={nextStepGroups}
             warningSignals={warningSignals}
+          />
+
+          <ResearchAssistantPanel
+            tasks={buildResearchTasks(
+              form,
+              analysisResult,
+              verificationResult,
+              reconciliationResult,
+            )}
           />
         </>
       )}

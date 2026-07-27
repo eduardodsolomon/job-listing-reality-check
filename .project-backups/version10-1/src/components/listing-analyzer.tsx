@@ -7,8 +7,10 @@ import {
   useState,
 } from "react";
 
+import ActionPlan from "@/components/action-plan";
 import JobHealthDashboard from "@/components/job-health-dashboard";
 import ReportHistory from "@/components/report-history";
+import ResearchAssistantPanel from "@/components/research-assistant-panel";
 import SpecializedProfilePanel from "@/components/specialized-profile-panel";
 import VerificationPanel from "@/components/verification-panel";
 
@@ -24,10 +26,11 @@ import {
   buildJobHealthProfile,
   buildNextStepGroups,
   explainSignal,
-  type NextStepGroup,
 } from "@/lib/presentation";
 
 import type { ReconciliationResult } from "@/lib/reconciliation-types";
+
+import { buildResearchTasks } from "@/lib/research-assistant";
 
 import { analyzeSpecializedProfile } from "@/lib/opportunity-analysis";
 
@@ -141,104 +144,6 @@ function SignalCard({
   );
 }
 
-function nextStepClasses(
-  group: NextStepGroup,
-): string {
-  switch (group.id) {
-    case "red-flags":
-      return "border-red-700 bg-red-50";
-
-    case "green-flags":
-      return "border-emerald-600 bg-emerald-50";
-
-    default:
-      return "border-blue-600 bg-blue-50";
-  }
-}
-
-function nextStepNumber(
-  group: NextStepGroup,
-): number {
-  switch (group.id) {
-    case "gather-information":
-      return 1;
-
-    case "red-flags":
-      return 2;
-
-    case "green-flags":
-      return 3;
-  }
-}
-
-function NextStepsPanel({
-  groups,
-}: {
-  groups: NextStepGroup[];
-}) {
-  return (
-    <section className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8">
-      <p className="text-base font-black uppercase tracking-widest text-violet-800">
-        Your action plan
-      </p>
-
-      <h2 className="mt-2 text-3xl font-black text-slate-950 sm:text-4xl">
-        What to do next
-      </h2>
-
-      <div className="mt-6 space-y-5">
-        {groups.map(
-          (group) => (
-            <article
-              key={group.id}
-              className={`rounded-3xl border-2 p-5 sm:p-6 ${nextStepClasses(
-                group,
-              )}`}
-            >
-              <div className="flex items-start gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-950 text-xl font-black text-white">
-                  {nextStepNumber(
-                    group,
-                  )}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-2xl font-black text-slate-950">
-                    {group.title}
-                  </h3>
-
-                  <p className="mt-2 text-base leading-7 text-slate-800">
-                    {group.summary}
-                  </p>
-
-                  <ul className="mt-4 space-y-3">
-                    {group.items.map(
-                      (item) => (
-                        <li
-                          key={item}
-                          className="flex gap-3 rounded-2xl bg-white p-4 text-base font-bold leading-7 text-slate-900"
-                        >
-                          <span aria-hidden="true">
-                            •
-                          </span>
-
-                          <span>
-                            {item}
-                          </span>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </article>
-          ),
-        )}
-      </div>
-    </section>
-  );
-}
-
 export default function ListingAnalyzer() {
   const [form, setForm] =
     useState<AnalysisInput>(
@@ -340,12 +245,9 @@ export default function ListingAnalyzer() {
   ): void {
     event.preventDefault();
 
-    if (
-      !form.listingText.trim() &&
-      !form.recruiterMessage.trim()
-    ) {
+    if (!form.listingText.trim()) {
       setFormError(
-        "Paste a job listing, recruiter message, or both.",
+        "Paste the job description and any additional context before checking the job.",
       );
 
       return;
@@ -504,9 +406,6 @@ export default function ListingAnalyzer() {
         onSubmit={handleSubmit}
         className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8"
       >
-        <p className="text-base font-black uppercase tracking-widest text-violet-800">
-          Step 1
-        </p>
 
         <h2 className="mt-2 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
           Add the job information
@@ -521,12 +420,11 @@ export default function ListingAnalyzer() {
         <div className="mt-7 grid gap-5 lg:grid-cols-2">
           <label className="block">
             <span className="text-lg font-black text-slate-950">
-              Type of opportunity
+              Type of Job
             </span>
 
             <span className="mt-1 block text-base text-slate-700">
-              This activates extra checks
-              for that type of work
+              Optional — Get more specific insights depending on the type of job
             </span>
 
             <select
@@ -556,11 +454,11 @@ export default function ListingAnalyzer() {
             0 && (
             <label className="block">
               <span className="text-lg font-black text-slate-950">
-                More specific type
+                More specific job type
               </span>
 
               <span className="mt-1 block text-base text-slate-700">
-                Choose the closest match
+                Optional — Choose the closest match
               </span>
 
               <select
@@ -598,11 +496,11 @@ export default function ListingAnalyzer() {
 
         <label className="mt-6 block">
           <span className="text-lg font-black text-slate-950">
-            Company
+            Company Name
           </span>
 
           <span className="mt-1 block text-base text-slate-700">
-            Optional
+            Optional — Paste the name of the company and also any recruiting agencies attached to the listing
           </span>
 
           <input
@@ -622,14 +520,16 @@ export default function ListingAnalyzer() {
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <label className="block">
             <span className="text-lg font-black text-slate-950">
-              Job listing
+              Job Description and any additional context
             </span>
 
-            <span className="mt-1 block text-base text-slate-700">
-              Paste the complete posting
-              from the employer’s official
-              careers website when available
-            </span>
+              <span className="mt-1 block text-base font-black text-slate-950">
+                Required
+              </span>
+
+              <span className="mt-1 block text-base text-slate-700">
+                Paste as much information about the listing as you can find.
+              </span>
 
             <textarea
               value={form.listingText}
@@ -640,6 +540,7 @@ export default function ListingAnalyzer() {
                 )
               }
               placeholder="Paste the job listing here..."
+              required
               className="mt-2 min-h-96 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
             />
           </label>
@@ -650,11 +551,12 @@ export default function ListingAnalyzer() {
                 Recruiter message
               </span>
 
+              <span className="mt-1 block text-base font-black text-slate-950">
+                Optional
+              </span>
+
               <span className="mt-1 block text-base text-slate-700">
-                Paste the email, text,
-                direct message, or answers
-                from the recruiter or hiring
-                manager
+                Paste any email, text, direct message, or answers from the recruiter or hiring manager.
               </span>
 
               <textarea
@@ -674,13 +576,15 @@ export default function ListingAnalyzer() {
 
             <label className="mt-6 block">
               <span className="text-lg font-black text-slate-950">
-                Public job URL
+                Job URL
+              </span>
+
+              <span className="mt-1 block text-base font-black text-slate-950">
+                Optional, but highly recommended
               </span>
 
               <span className="mt-1 block text-base text-slate-700">
-                Use the posting from the
-                employer’s official careers
-                website when possible
+                For best results, find the official organization’s job listing.
               </span>
 
               <input
@@ -798,30 +702,18 @@ export default function ListingAnalyzer() {
             }
           />
 
-          {warningSignals.length >
-            0 && (
-            <section className="rounded-[2rem] border-2 border-amber-500 bg-white p-5 shadow-lg sm:p-8">
-              <h2 className="text-3xl font-black text-slate-950">
-                Things to check
-              </h2>
+          <ActionPlan
+            groups={nextStepGroups}
+            warningSignals={warningSignals}
+          />
 
-              <div className="mt-6 space-y-5">
-                {warningSignals.map(
-                  (signal) => (
-                    <SignalCard
-                      key={signal.id}
-                      signal={signal}
-                    />
-                  ),
-                )}
-              </div>
-            </section>
-          )}
-
-          <NextStepsPanel
-            groups={
-              nextStepGroups
-            }
+          <ResearchAssistantPanel
+            tasks={buildResearchTasks(
+              form,
+              analysisResult,
+              verificationResult,
+              reconciliationResult,
+            )}
           />
         </>
       )}

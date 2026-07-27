@@ -25,12 +25,12 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-950 sm:px-6 sm:py-12 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="rounded-[2rem] border-2 border-slate-800 bg-slate-950 p-6 text-white shadow-lg sm:p-10">
-          <h1 className="text-4xl font-black leading-tight text-white sm:text-6xl">
+        <header className="rounded-[2rem] border-2 border-slate-300 bg-white p-6 shadow-lg sm:p-10">
+          <h1 className="text-4xl font-black leading-tight text-slate-950 sm:text-6xl">
             Job Listing Reality Check
           </h1>
 
-          <p className="mt-5 max-w-4xl text-xl font-bold leading-9 text-slate-100 sm:text-2xl">
+          <p className="mt-5 max-w-4xl text-xl font-bold leading-9 text-slate-800 sm:text-2xl">
             Post your job, get a score to
             rate how realistic it is. Based
             on modern trends.
@@ -40,6 +40,9 @@ export default function Home() {
             aria-label="Related job-listing resources"
             className="mt-6"
           >
+            <p className="text-sm font-black uppercase tracking-widest text-violet-800">
+              Related resources
+            </p>
 
             <div className="mt-3 flex flex-wrap gap-3">
               {relatedResources.map(
@@ -49,7 +52,7 @@ export default function Home() {
                     href={resource.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="rounded-full border-2 border-white bg-slate-900 px-4 py-2 text-sm font-black text-white underline decoration-2 underline-offset-4 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white"
+                    className="rounded-full border-2 border-violet-600 bg-violet-50 px-4 py-2 text-sm font-black text-violet-950 underline decoration-2 underline-offset-4 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-300"
                   >
                     {resource.label}
                     <span className="sr-only">
@@ -62,7 +65,7 @@ export default function Home() {
             </div>
           </nav>
 
-          <p className="mt-7 rounded-2xl border-2 border-amber-300 bg-amber-100 p-5 text-base font-black leading-7 text-slate-950 sm:text-lg">
+          <p className="mt-7 rounded-2xl border-2 border-amber-600 bg-amber-50 p-5 text-base font-black leading-7 text-amber-950 sm:text-lg">
             Note: This is an additional
             screening tool. Never send money
             or sensitive information based
