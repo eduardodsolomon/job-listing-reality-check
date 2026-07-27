@@ -9,6 +9,7 @@ import {
 
 import JobHealthDashboard from "@/components/job-health-dashboard";
 import ReportHistory from "@/components/report-history";
+import SpecializedProfilePanel from "@/components/specialized-profile-panel";
 import VerificationPanel from "@/components/verification-panel";
 
 import {
@@ -27,6 +28,21 @@ import {
 } from "@/lib/presentation";
 
 import type { ReconciliationResult } from "@/lib/reconciliation-types";
+
+import { analyzeSpecializedProfile } from "@/lib/specialized-analysis";
+
+import {
+  applySpecializedProfile,
+  mergeSpecializedNextSteps,
+} from "@/lib/specialized-presentation";
+
+import {
+  getOpportunitySubtypeOptions,
+  OPPORTUNITY_TYPE_OPTIONS,
+  type OpportunitySubtype,
+  type OpportunityType,
+} from "@/lib/specialized-analysis-types";
+
 import type { VerificationResult } from "@/lib/verification-types";
 
 const emptyForm: AnalysisInput = {
@@ -34,6 +50,8 @@ const emptyForm: AnalysisInput = {
   listingUrl: "",
   listingText: "",
   recruiterMessage: "",
+  opportunityType: "standard",
+  opportunitySubtype: undefined,
 };
 
 function signalClasses(
@@ -272,15 +290,22 @@ export default function ListingAnalyzer() {
       null,
     );
 
+  const opportunityType =
+    form.opportunityType ??
+    "standard";
+
+  const subtypeOptions =
+    getOpportunitySubtypeOptions(
+      opportunityType,
+    );
+
   function updateField(
     field: keyof AnalysisInput,
-    value: string,
+    value:
+      AnalysisInput[keyof AnalysisInput],
   ): void {
     setForm(
-      (
-        current:
-          AnalysisInput,
-      ) => ({
+      (current) => ({
         ...current,
         [field]: value,
       }),
@@ -294,6 +319,19 @@ export default function ListingAnalyzer() {
       setReconciliationResult(null);
       setUrlError(null);
     }
+  }
+
+  function changeOpportunityType(
+    value: OpportunityType,
+  ): void {
+    setForm(
+      (current) => ({
+        ...current,
+        opportunityType: value,
+        opportunitySubtype:
+          undefined,
+      }),
+    );
   }
 
   function handleSubmit(
@@ -317,6 +355,7 @@ export default function ListingAnalyzer() {
 
     setAnalysisResult(
       analyzeListing({
+        ...form,
         company:
           form.company.trim(),
         listingUrl:
@@ -343,7 +382,8 @@ export default function ListingAnalyzer() {
     setUrlError(null);
 
     setVerificationRequestId(
-      (current) => current + 1,
+      (current) =>
+        current + 1,
     );
   }
 
@@ -376,22 +416,38 @@ export default function ListingAnalyzer() {
       [],
     );
 
-  const jobHealthProfile =
+  const specializedResult =
     useMemo(
       () =>
-        analysisResult
-          ? buildJobHealthProfile(
-              analysisResult,
-              verificationResult,
-              reconciliationResult,
-            )
-          : null,
-      [
-        analysisResult,
-        verificationResult,
-        reconciliationResult,
-      ],
+        analyzeSpecializedProfile(
+          form,
+        ),
+      [form],
     );
+
+  const jobHealthProfile =
+    useMemo(() => {
+      if (!analysisResult) {
+        return null;
+      }
+
+      const baseProfile =
+        buildJobHealthProfile(
+          analysisResult,
+          verificationResult,
+          reconciliationResult,
+        );
+
+      return applySpecializedProfile(
+        baseProfile,
+        specializedResult,
+      );
+    }, [
+      analysisResult,
+      verificationResult,
+      reconciliationResult,
+      specializedResult,
+    ]);
 
   const criticalSignals =
     useMemo(
@@ -417,23 +473,30 @@ export default function ListingAnalyzer() {
     );
 
   const nextStepGroups =
-    useMemo(
-      () =>
-        analysisResult
-          ? buildNextStepGroups(
-              analysisResult,
-              verificationResult,
-              Boolean(
-                form.listingUrl.trim(),
-              ),
-            )
-          : [],
-      [
-        analysisResult,
-        verificationResult,
-        form.listingUrl,
-      ],
-    );
+    useMemo(() => {
+      if (!analysisResult) {
+        return [];
+      }
+
+      const baseGroups =
+        buildNextStepGroups(
+          analysisResult,
+          verificationResult,
+          Boolean(
+            form.listingUrl.trim(),
+          ),
+        );
+
+      return mergeSpecializedNextSteps(
+        baseGroups,
+        specializedResult,
+      );
+    }, [
+      analysisResult,
+      verificationResult,
+      form.listingUrl,
+      specializedResult,
+    ]);
 
   return (
     <div className="space-y-8">
@@ -450,13 +513,90 @@ export default function ListingAnalyzer() {
         </h2>
 
         <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-800">
-          Paste the job listing and any
-          message you received. You can add
-          more information later and run the
-          check again.
+          Select the type of opportunity,
+          then paste the information you
+          received.
         </p>
 
-        <label className="mt-7 block">
+        <div className="mt-7 grid gap-5 lg:grid-cols-2">
+          <label className="block">
+            <span className="text-lg font-black text-slate-950">
+              Type of opportunity
+            </span>
+
+            <span className="mt-1 block text-base text-slate-700">
+              This activates extra checks
+              for that type of work
+            </span>
+
+            <select
+              value={opportunityType}
+              onChange={(event) =>
+                changeOpportunityType(
+                  event.target
+                    .value as OpportunityType,
+                )
+              }
+              className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+            >
+              {OPPORTUNITY_TYPE_OPTIONS.map(
+                (option) => (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          {subtypeOptions.length >
+            0 && (
+            <label className="block">
+              <span className="text-lg font-black text-slate-950">
+                More specific type
+              </span>
+
+              <span className="mt-1 block text-base text-slate-700">
+                Choose the closest match
+              </span>
+
+              <select
+                value={
+                  form.opportunitySubtype ??
+                  ""
+                }
+                onChange={(event) =>
+                  updateField(
+                    "opportunitySubtype",
+                    event.target
+                      .value as OpportunitySubtype,
+                  )
+                }
+                className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+              >
+                <option value="">
+                  Select a more specific type
+                </option>
+
+                {subtypeOptions.map(
+                  (option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                    >
+                      {option.label}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+          )}
+        </div>
+
+        <label className="mt-6 block">
           <span className="text-lg font-black text-slate-950">
             Company
           </span>
@@ -486,9 +626,9 @@ export default function ListingAnalyzer() {
             </span>
 
             <span className="mt-1 block text-base text-slate-700">
-              Paste the complete posting from
-              the employer’s official careers
-              website when available
+              Paste the complete posting
+              from the employer’s official
+              careers website when available
             </span>
 
             <textarea
@@ -511,9 +651,10 @@ export default function ListingAnalyzer() {
               </span>
 
               <span className="mt-1 block text-base text-slate-700">
-                Paste the email, text, direct
-                message, or answers from the
-                recruiter or hiring manager
+                Paste the email, text,
+                direct message, or answers
+                from the recruiter or hiring
+                manager
               </span>
 
               <textarea
@@ -648,6 +789,12 @@ export default function ListingAnalyzer() {
           <JobHealthDashboard
             profile={
               jobHealthProfile
+            }
+          />
+
+          <SpecializedProfilePanel
+            result={
+              specializedResult
             }
           />
 

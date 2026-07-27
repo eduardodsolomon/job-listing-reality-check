@@ -35,6 +35,12 @@ import type {
   SavedReportDraft,
 } from "@/lib/saved-report-types";
 
+import { analyzeSpecializedProfile } from "@/lib/specialized-analysis";
+
+import { applySpecializedProfile } from "@/lib/specialized-presentation";
+
+import { getOpportunityTypeLabel } from "@/lib/specialized-analysis-types";
+
 import type { VerificationResult } from "@/lib/verification-types";
 
 interface ReportHistoryProps {
@@ -84,7 +90,9 @@ function formatDate(
 ): string {
   const date = new Date(value);
 
-  return Number.isNaN(date.getTime())
+  return Number.isNaN(
+    date.getTime(),
+  )
     ? value
     : date.toLocaleString();
 }
@@ -103,12 +111,18 @@ export default function ReportHistory({
   const [
     message,
     setMessage,
-  ] = useState<string | null>(null);
+  ] =
+    useState<string | null>(
+      null,
+    );
 
   const [
     error,
     setError,
-  ] = useState<string | null>(null);
+  ] =
+    useState<string | null>(
+      null,
+    );
 
   useEffect(() => {
     setSavedReports(
@@ -290,8 +304,8 @@ export default function ReportHistory({
 
       {!currentDraft && (
         <p className="mt-5 rounded-2xl bg-slate-100 p-5 text-base font-bold leading-7 text-slate-800">
-          Complete both the job check and URL
-          check to save a report.
+          Complete both the job check and
+          URL check to save a report.
         </p>
       )}
 
@@ -352,11 +366,22 @@ export default function ReportHistory({
         <div className="mt-6 space-y-5">
           {savedReports.map(
             (report) => {
-              const profile =
+              const baseProfile =
                 buildJobHealthProfile(
                   report.analysisResult,
                   report.verificationResult,
                   report.reconciliationResult,
+                );
+
+              const specialized =
+                analyzeSpecializedProfile(
+                  report.form,
+                );
+
+              const profile =
+                applySpecializedProfile(
+                  baseProfile,
+                  specialized,
                 );
 
               const listingQuality =
@@ -380,6 +405,13 @@ export default function ReportHistory({
                     "evidence-quality",
                 );
 
+              const opportunityLabel =
+                getOpportunityTypeLabel(
+                  report.form
+                    .opportunityType ??
+                    "standard",
+                );
+
               return (
                 <article
                   key={report.id}
@@ -388,8 +420,16 @@ export default function ReportHistory({
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="text-2xl font-black text-slate-950">
-                        {reportTitle(report)}
+                        {reportTitle(
+                          report,
+                        )}
                       </h3>
+
+                      <p className="mt-2 text-base font-bold text-indigo-800">
+                        {
+                          opportunityLabel
+                        }
+                      </p>
 
                       <p className="mt-2 text-base text-slate-700">
                         Saved{" "}
