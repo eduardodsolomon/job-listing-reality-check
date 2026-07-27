@@ -11,6 +11,12 @@ import type {
   AnalysisResult,
 } from "@/lib/analyze-listing";
 
+import {
+  buildJobHealthProfile,
+  healthBandForScore,
+  type HealthBand,
+} from "@/lib/presentation";
+
 import type { ReconciliationResult } from "@/lib/reconciliation-types";
 
 import {
@@ -41,32 +47,26 @@ interface ReportHistoryProps {
     ReconciliationResult | null;
 }
 
-function riskClasses(
-  score: number,
+function scoreClasses(
+  band: HealthBand,
 ): string {
-  if (score >= 70) {
-    return "border-red-200 bg-red-50";
+  switch (band) {
+    case "excellent":
+    case "good":
+      return "border-emerald-500 bg-emerald-50 text-emerald-950";
+
+    case "fair":
+      return "border-amber-500 bg-amber-50 text-amber-950";
+
+    case "poor":
+      return "border-orange-600 bg-orange-50 text-orange-950";
+
+    case "critical":
+      return "border-red-700 bg-red-50 text-red-950";
+
+    default:
+      return "border-slate-400 bg-slate-100 text-slate-900";
   }
-
-  if (score >= 40) {
-    return "border-amber-200 bg-amber-50";
-  }
-
-  return "border-emerald-200 bg-emerald-50";
-}
-
-function confidenceClasses(
-  score: number,
-): string {
-  if (score >= 70) {
-    return "border-emerald-200 bg-emerald-50";
-  }
-
-  if (score >= 40) {
-    return "border-blue-200 bg-blue-50";
-  }
-
-  return "border-amber-200 bg-amber-50";
 }
 
 function reportTitle(
@@ -75,26 +75,8 @@ function reportTitle(
   return (
     report.verificationResult.title ||
     report.form.company ||
-    "Untitled job listing"
+    "Saved job report"
   );
-}
-
-function reportSubtitle(
-  report: SavedReport,
-): string {
-  const values = [
-    report.form.company,
-    report.verificationResult.location,
-  ].filter(
-    (value): value is string =>
-      Boolean(value),
-  );
-
-  if (values.length === 0) {
-    return "No company or location recorded";
-  }
-
-  return values.join(" · ");
 }
 
 function formatDate(
@@ -102,11 +84,9 @@ function formatDate(
 ): string {
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleString();
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString();
 }
 
 export default function ReportHistory({
@@ -121,13 +101,13 @@ export default function ReportHistory({
   ] = useState<SavedReport[]>([]);
 
   const [
-    feedback,
-    setFeedback,
+    message,
+    setMessage,
   ] = useState<string | null>(null);
 
   const [
-    storageError,
-    setStorageError,
+    error,
+    setError,
   ] = useState<string | null>(null);
 
   useEffect(() => {
@@ -162,32 +142,30 @@ export default function ReportHistory({
       ],
     );
 
-  function showSuccess(
-    message: string,
+  function success(
+    value: string,
   ): void {
-    setStorageError(null);
-    setFeedback(message);
+    setError(null);
+    setMessage(value);
   }
 
-  function showError(
-    error: unknown,
-    fallbackMessage: string,
+  function failure(
+    problem: unknown,
+    fallback: string,
   ): void {
-    setFeedback(null);
+    setMessage(null);
 
-    setStorageError(
-      error instanceof Error
-        ? error.message
-        : fallbackMessage,
+    setError(
+      problem instanceof Error
+        ? problem.message
+        : fallback,
     );
   }
 
-  function saveCurrentReport(): void {
+  function saveCurrent(): void {
     if (!currentDraft) {
-      setFeedback(null);
-
-      setStorageError(
-        "Run both the text analysis and URL verification before saving a report.",
+      setError(
+        "Run the job check and URL check before saving.",
       );
 
       return;
@@ -199,69 +177,44 @@ export default function ReportHistory({
           currentDraft,
         );
 
-      const nextReports =
-        saveSavedReport(report);
-
-      setSavedReports(nextReports);
-
-      showSuccess(
-        "The completed report was saved in this browser.",
+      setSavedReports(
+        saveSavedReport(report),
       );
-    } catch (error) {
-      showError(
-        error,
+
+      success(
+        "Report saved in this browser.",
+      );
+    } catch (problem) {
+      failure(
+        problem,
         "The report could not be saved.",
       );
     }
   }
 
-  function exportCurrentReport(): void {
+  function exportCurrent(): void {
     if (!currentDraft) {
-      setFeedback(null);
-
-      setStorageError(
-        "Run both the text analysis and URL verification before exporting a report.",
+      setError(
+        "Run the job check and URL check before exporting.",
       );
 
       return;
     }
 
     try {
-      const report =
+      downloadSavedReport(
         createSavedReport(
           currentDraft,
-        );
-
-      downloadSavedReport(report);
-
-      showSuccess(
-        "The current report was exported as JSON.",
+        ),
       );
-    } catch (error) {
-      showError(
-        error,
+
+      success(
+        "Report exported.",
+      );
+    } catch (problem) {
+      failure(
+        problem,
         "The report could not be exported.",
-      );
-    }
-  }
-
-  function exportAllReports(): void {
-    if (savedReports.length === 0) {
-      return;
-    }
-
-    try {
-      downloadSavedReportHistory(
-        savedReports,
-      );
-
-      showSuccess(
-        "The saved report history was exported as JSON.",
-      );
-    } catch (error) {
-      showError(
-        error,
-        "The report history could not be exported.",
       );
     }
   }
@@ -270,19 +223,16 @@ export default function ReportHistory({
     reportId: string,
   ): void {
     try {
-      const nextReports =
+      setSavedReports(
         deleteSavedReport(
           reportId,
-        );
-
-      setSavedReports(nextReports);
-
-      showSuccess(
-        "The saved report was deleted.",
+        ),
       );
-    } catch (error) {
-      showError(
-        error,
+
+      success("Report deleted.");
+    } catch (problem) {
+      failure(
+        problem,
         "The report could not be deleted.",
       );
     }
@@ -291,119 +241,94 @@ export default function ReportHistory({
   function clearHistory(): void {
     const confirmed =
       window.confirm(
-        "Delete all saved job-listing reports from this browser?",
+        "Delete all saved reports from this browser?",
       );
 
     if (!confirmed) {
       return;
     }
 
-    try {
-      clearSavedReports();
-      setSavedReports([]);
-
-      showSuccess(
-        "All saved reports were deleted.",
-      );
-    } catch (error) {
-      showError(
-        error,
-        "The report history could not be cleared.",
-      );
-    }
+    clearSavedReports();
+    setSavedReports([]);
+    success("All reports deleted.");
   }
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <section className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-950">
-            Saved report history
+          <h2 className="text-3xl font-black text-slate-950">
+            Saved reports
           </h2>
 
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Save completed reports in this
-            browser or export them as JSON.
-            Reports are not saved
-            automatically.
+          <p className="mt-3 text-lg leading-8 text-slate-800">
+            Reports stay in this browser
+            unless you delete them.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
-            onClick={saveCurrentReport}
+            onClick={saveCurrent}
             disabled={!currentDraft}
-            className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-600 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="min-h-14 w-full rounded-2xl bg-violet-800 px-5 py-3 text-lg font-black text-white disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
           >
-            Save current report
+            Save report
           </button>
 
           <button
             type="button"
-            onClick={exportCurrentReport}
+            onClick={exportCurrent}
             disabled={!currentDraft}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="min-h-14 w-full rounded-2xl border-2 border-slate-500 bg-white px-5 py-3 text-lg font-black text-slate-900 disabled:cursor-not-allowed disabled:text-slate-400 sm:w-auto"
           >
-            Export current JSON
+            Export JSON
           </button>
         </div>
-      </div>
-
-      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-        Saved reports may contain job
-        descriptions, recruiter messages,
-        company names, URLs, and analysis
-        results. They remain in this browser
-        until you delete them or clear browser
-        storage.
       </div>
 
       {!currentDraft && (
-        <p className="mt-4 rounded-xl bg-slate-100 p-4 text-sm leading-6 text-slate-700">
-          Run the text analysis and URL
-          verification to enable report saving
-          and export.
+        <p className="mt-5 rounded-2xl bg-slate-100 p-5 text-base font-bold leading-7 text-slate-800">
+          Complete both the job check and URL
+          check to save a report.
         </p>
       )}
 
-      {feedback && (
+      {message && (
         <p
           role="status"
-          className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+          className="mt-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-5 text-base font-bold text-emerald-950"
         >
-          {feedback}
+          ✓ {message}
         </p>
       )}
 
-      {storageError && (
+      {error && (
         <p
           role="alert"
-          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"
+          className="mt-5 rounded-2xl border-2 border-red-700 bg-red-50 p-5 text-base font-bold text-red-950"
         >
-          {storageError}
+          ⛔ {error}
         </p>
       )}
 
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-bold text-slate-950">
-            Reports saved in this browser
-          </h3>
-
-          <p className="mt-1 text-sm text-slate-600">
-            {savedReports.length} of{" "}
-            {MAX_SAVED_REPORTS} report slots
-            used
-          </p>
-        </div>
+      <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-lg font-black text-slate-950">
+          {savedReports.length} of{" "}
+          {MAX_SAVED_REPORTS} reports saved
+        </p>
 
         {savedReports.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={exportAllReports}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              onClick={() =>
+                downloadSavedReportHistory(
+                  savedReports,
+                )
+              }
+              className="min-h-12 rounded-xl border-2 border-slate-500 bg-white px-4 py-2 text-base font-black"
             >
               Export all
             </button>
@@ -411,255 +336,156 @@ export default function ReportHistory({
             <button
               type="button"
               onClick={clearHistory}
-              className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+              className="min-h-12 rounded-xl border-2 border-red-700 bg-white px-4 py-2 text-base font-black text-red-800"
             >
-              Clear history
+              Delete all
             </button>
           </div>
         )}
       </div>
 
       {savedReports.length === 0 ? (
-        <p className="mt-4 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600">
-          No reports have been saved in this
-          browser.
+        <p className="mt-5 rounded-2xl border-2 border-dashed border-slate-400 p-8 text-center text-lg font-bold text-slate-700">
+          No saved reports yet
         </p>
       ) : (
-        <div className="mt-4 space-y-4">
+        <div className="mt-6 space-y-5">
           {savedReports.map(
-            (report) => (
-              <article
-                key={report.id}
-                className="rounded-2xl border border-slate-200 p-5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-950">
-                      {reportTitle(report)}
-                    </h4>
+            (report) => {
+              const profile =
+                buildJobHealthProfile(
+                  report.analysisResult,
+                  report.verificationResult,
+                  report.reconciliationResult,
+                );
 
-                    <p className="mt-1 text-sm text-slate-600">
-                      {reportSubtitle(
-                        report,
-                      )}
-                    </p>
+              const listingQuality =
+                profile.metrics.find(
+                  (metric) =>
+                    metric.id ===
+                    "listing-quality",
+                );
 
-                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Saved{" "}
-                      {formatDate(
-                        report.savedAt,
-                      )}
-                    </p>
-                  </div>
+              const safety =
+                profile.metrics.find(
+                  (metric) =>
+                    metric.id ===
+                    "personal-safety",
+                );
 
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        downloadSavedReport(
-                          report,
-                        )
-                      }
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                    >
-                      Export
-                    </button>
+              const evidence =
+                profile.metrics.find(
+                  (metric) =>
+                    metric.id ===
+                    "evidence-quality",
+                );
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeReport(
-                          report.id,
-                        )
-                      }
-                      className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div
-                    className={`rounded-xl border p-3 ${riskClasses(
-                      report.analysisResult
-                        .ghostRisk,
-                    )}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      Ghost risk
-                    </p>
-
-                    <p className="mt-1 text-xl font-bold text-slate-950">
-                      {
-                        report.analysisResult
-                          .ghostRisk
-                      }
-                    </p>
-                  </div>
-
-                  <div
-                    className={`rounded-xl border p-3 ${riskClasses(
-                      report.analysisResult
-                        .scamRisk,
-                    )}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      Scam risk
-                    </p>
-
-                    <p className="mt-1 text-xl font-bold text-slate-950">
-                      {
-                        report.analysisResult
-                          .scamRisk
-                      }
-                    </p>
-                  </div>
-
-                  <div
-                    className={`rounded-xl border p-3 ${confidenceClasses(
-                      report.analysisResult
-                        .confidence,
-                    )}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      Text confidence
-                    </p>
-
-                    <p className="mt-1 text-xl font-bold text-slate-950">
-                      {
-                        report.analysisResult
-                          .confidence
-                      }
-                    </p>
-                  </div>
-
-                  <div
-                    className={`rounded-xl border p-3 ${confidenceClasses(
-                      report
-                        .reconciliationResult
-                        .adjustedConfidence,
-                    )}`}
-                  >
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      Adjusted confidence
-                    </p>
-
-                    <p className="mt-1 text-xl font-bold text-slate-950">
-                      {
-                        report
-                          .reconciliationResult
-                          .adjustedConfidence
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                <details className="mt-5 rounded-xl bg-slate-50 p-4">
-                  <summary className="cursor-pointer font-semibold text-slate-900">
-                    Review saved evidence
-                  </summary>
-
-                  <div className="mt-4 space-y-4 text-sm leading-6 text-slate-700">
+              return (
+                <article
+                  key={report.id}
+                  className="rounded-3xl border-2 border-slate-300 p-5 sm:p-6"
+                >
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900">
-                        Listing URL
-                      </p>
+                      <h3 className="text-2xl font-black text-slate-950">
+                        {reportTitle(report)}
+                      </h3>
 
-                      <p className="mt-1 break-all">
-                        {report.form
-                          .listingUrl ||
-                          "No URL recorded"}
+                      <p className="mt-2 text-base text-slate-700">
+                        Saved{" "}
+                        {formatDate(
+                          report.savedAt,
+                        )}
                       </p>
                     </div>
 
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Verification
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          downloadSavedReport(
+                            report,
+                          )
+                        }
+                        className="min-h-12 rounded-xl border-2 border-slate-500 px-4 py-2 text-base font-black"
+                      >
+                        Export
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          removeReport(
+                            report.id,
+                          )
+                        }
+                        className="min-h-12 rounded-xl border-2 border-red-700 px-4 py-2 text-base font-black text-red-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div
+                      className={`rounded-2xl border-2 p-4 ${scoreClasses(
+                        profile.overallBand,
+                      )}`}
+                    >
+                      <p className="text-base font-black">
+                        Job health
                       </p>
 
-                      <p className="mt-1">
+                      <p className="mt-2 text-4xl font-black">
                         {
-                          report
-                            .verificationResult
-                            .status
-                        }{" "}
-                        ·{" "}
-                        {
-                          report
-                            .verificationResult
-                            .provider
+                          profile.overallScore
                         }
                       </p>
-                    </div>
 
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Reconciliation summary
-                      </p>
-
-                      <p className="mt-1">
-                        {
-                          report
-                            .reconciliationResult
-                            .summary
-                        }
+                      <p className="text-base font-bold">
+                        out of 100
                       </p>
                     </div>
 
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        Evidence comparisons
-                      </p>
+                    {[
+                      listingQuality,
+                      safety,
+                      evidence,
+                    ].map(
+                      (metric) =>
+                        metric &&
+                        metric.score !==
+                          null && (
+                          <div
+                            key={metric.id}
+                            className={`rounded-2xl border-2 p-4 ${scoreClasses(
+                              healthBandForScore(
+                                metric.score,
+                              ),
+                            )}`}
+                          >
+                            <p className="text-base font-black">
+                              {
+                                metric.label
+                              }
+                            </p>
 
-                      {report
-                        .reconciliationResult
-                        .comparisons.length ===
-                      0 ? (
-                        <p className="mt-2">
-                          No comparison details
-                          were saved.
-                        </p>
-                      ) : (
-                        <ul className="mt-2 space-y-2">
-                          {report.reconciliationResult.comparisons.map(
-                            (
-                              comparison,
-                            ) => (
-                              <li
-                                key={
-                                  comparison.field
-                                }
-                                className="rounded-lg border border-slate-200 bg-white p-3"
-                              >
-                                <strong>
-                                  {
-                                    comparison.label
-                                  }
-                                  :
-                                </strong>{" "}
-                                {
-                                  comparison.status
-                                }{" "}
-                                (
-                                {comparison.adjustment >
-                                0
-                                  ? "+"
-                                  : ""}
-                                {
-                                  comparison.adjustment
-                                }{" "}
-                                points)
-                              </li>
-                            ),
-                          )}
-                        </ul>
-                      )}
-                    </div>
+                            <p className="mt-2 text-4xl font-black">
+                              {
+                                metric.score
+                              }
+                            </p>
+
+                            <p className="text-base font-bold">
+                              out of 100
+                            </p>
+                          </div>
+                        ),
+                    )}
                   </div>
-                </details>
-              </article>
-            ),
+                </article>
+              );
+            },
           )}
         </div>
       )}

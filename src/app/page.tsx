@@ -1,41 +1,75 @@
 import ListingAnalyzer from "@/components/listing-analyzer";
-
 import { RULESET_VERSION } from "@/rules";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
-        <header className="mb-10 max-w-3xl">
-          <p className="text-sm font-bold uppercase tracking-widest text-slate-600">
+    <main className="min-h-screen bg-slate-100">
+      <header className="border-b-4 border-violet-700 bg-slate-950 text-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-14">
+          <p className="text-base font-black uppercase tracking-[0.18em] text-violet-300">
+            Simple job safety check
+          </p>
+
+          <h1 className="mt-3 max-w-5xl text-4xl font-black leading-tight sm:text-6xl">
+            Job Listing Reality Check
+          </h1>
+
+          <p className="mt-5 max-w-3xl text-xl leading-9 text-slate-200">
+            Get one easy job-health score,
+            then see exactly what helped or
+            hurt it.
+          </p>
+
+          <div className="mt-7 rounded-3xl border-2 border-slate-600 bg-slate-900 p-5 text-lg font-bold leading-8">
+            <span className="text-red-300">
+              0 means poor.
+            </span>{" "}
+            <span className="text-emerald-300">
+              100 means strong.
+            </span>{" "}
+            Red always means concern. Green
+            always means stronger evidence.
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+        <div className="mb-8 rounded-3xl border-2 border-blue-500 bg-blue-50 p-5 text-lg leading-8 text-blue-950 sm:p-6">
+          <p className="font-black">
+            This is a screening tool
+          </p>
+
+          <p className="mt-2">
+            It cannot prove that a job is
+            legitimate or fraudulent. Do not
+            send money, banking information,
+            identity documents, or sensitive
+            personal information based only
+            on this report.
+          </p>
+        </div>
+
+        <ListingAnalyzer />
+      </div>
+
+      <footer className="mt-14 border-t-2 border-slate-300 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-8 text-base leading-7 text-slate-700 sm:px-8">
+          <p className="font-black text-slate-950">
             Job Listing Reality Check
           </p>
 
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl">
-            Check a job listing before you invest your time or information.
-          </h1>
-
-          <p className="mt-5 text-lg leading-8 text-slate-700">
-            Paste a listing to identify ghost-job warning signs,
-            recruitment scams, phishing risks, and missing information.
-            Every result explains which signals affected the score.
+          <p className="mt-2">
+            Interface version 6 · Ruleset{" "}
+            {RULESET_VERSION}
           </p>
 
-          <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950">
-            This prototype performs text-based screening and on-demand URL
-            verification. Greenhouse and Lever postings can be checked
-            through their public job endpoints. Other websites receive a
-            limited reachability and structured-data check. Results do not
-            prove employer intent.
-          </div>
-        </header>
-
-        <ListingAnalyzer />
-
-        <footer className="mt-12 border-t border-slate-200 pt-6 text-sm leading-6 text-slate-600">
-          Methodology version {RULESET_VERSION}. Results describe risk signals and verification gaps, not statistical probabilities.
-        </footer>
-      </div>
+          <p className="mt-3 max-w-4xl">
+            Educational screening information
+            only. This is not legal advice or
+            definitive employer verification.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }
