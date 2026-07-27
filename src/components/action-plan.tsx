@@ -1,3 +1,5 @@
+import PointBadge from "@/components/point-badge";
+
 import type {
   Signal,
 } from "@/lib/analysis-types";
@@ -11,60 +13,270 @@ import type {
   NextStepGroup,
 } from "@/lib/presentation";
 
+import type {
+  ResearchTask,
+} from "@/lib/research-assistant";
+
+import {
+  signalScoreImpact,
+} from "@/lib/score-impact";
+
+import type {
+  SpecializedAnalysisResult,
+  SpecializedFinding,
+} from "@/lib/specialized-analysis-types";
+
 interface ActionPlanProps {
   groups: NextStepGroup[];
   warningSignals: Signal[];
+  specializedResult?:
+    SpecializedAnalysisResult | null;
+  researchTasks?: ResearchTask[];
 }
 
-function groupClasses(
-  id: NextStepGroup["id"],
-): string {
-  switch (id) {
-    case "red-flags":
-      return "border-red-700 bg-red-50";
-
-    case "green-flags":
-      return "border-emerald-600 bg-emerald-50";
-
-    default:
-      return "border-blue-600 bg-blue-50";
-  }
+interface NextStepItem {
+  id: string;
+  title: string;
+  detail?: string;
+  points: number | null;
+  searchQuery?: string | null;
 }
 
-function questionSymbol(
-  id: NextStepGroup["id"],
+function normalizeMeaning(
+  value: string,
 ): string {
-  switch (id) {
-    case "red-flags":
-      return "?";
+  return value
+    .toLowerCase()
+    .replace(
+      /https?:\/\/\S+/g,
+      "",
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .replace(
+      /\b(the|a|an|this|that|your|you|job|role|listing|posting)\b/g,
+      " ",
+    )
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
 
-    case "green-flags":
-      return "✓";
+function uniqueItems(
+  items: NextStepItem[],
+): NextStepItem[] {
+  const seen =
+    new Set<string>();
 
-    default:
-      return "•";
+  return items.filter(
+    (item) => {
+      const key =
+        normalizeMeaning(
+          `${item.title} ${item.detail ?? ""}`,
+        );
+
+      if (
+        !key ||
+        seen.has(key)
+      ) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    },
+  );
+}
+
+function groupById(
+  groups: NextStepGroup[],
+  id: NextStepGroup["id"],
+): NextStepGroup | undefined {
+  return groups.find(
+    (group) =>
+      group.id === id,
+  );
+}
+
+function genericItems(
+  values: string[],
+  prefix: string,
+): NextStepItem[] {
+  return values.map(
+    (value, index) => ({
+      id: `${prefix}-${index}`,
+      title: value,
+      points: null,
+    }),
+  );
+}
+
+function signalItems(
+  signals: Signal[],
+): NextStepItem[] {
+  return signals.map(
+    (signal) => ({
+      id: `signal-${signal.id}`,
+      title: signal.title,
+      detail:
+        signal.explanation,
+      points:
+        signalScoreImpact(
+          signal,
+        ),
+    }),
+  );
+}
+
+function specializedItems(
+  findings:
+    SpecializedFinding[],
+): NextStepItem[] {
+  return findings.map(
+    (finding) => ({
+      id: `specialized-${finding.id}`,
+      title: finding.title,
+      detail: [
+        finding.explanation,
+        finding.nextStep,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      points:
+        Math.ceil(
+          finding.points,
+        ),
+    }),
+  );
+}
+
+function researchItems(
+  tasks: ResearchTask[],
+): NextStepItem[] {
+  return tasks.map(
+    (task) => ({
+      id: `research-${task.id}`,
+      title: task.title,
+      detail: [
+        task.reason,
+        task.action,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      points: null,
+      searchQuery:
+        task.searchQuery,
+    }),
+  );
+}
+
+function itemClasses(
+  points: number | null,
+): string {
+  if (
+    points !== null &&
+    points < 0
+  ) {
+    return "border-red-300 bg-red-50";
   }
+
+  if (
+    points !== null &&
+    points > 0
+  ) {
+    return "border-emerald-300 bg-emerald-50";
+  }
+
+  return "border-slate-300 bg-white";
+}
+
+function NextStepList({
+  items,
+}: {
+  items: NextStepItem[];
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <ul className="mt-4 space-y-3">
+      {items.map(
+        (item) => (
+          <li
+            key={item.id}
+            className={`flex gap-3 rounded-2xl border-2 p-4 ${itemClasses(
+              item.points,
+            )}`}
+          >
+            <PointBadge
+              points={item.points}
+            />
+
+            <div className="min-w-0">
+              <p className="text-base font-black leading-7 text-slate-950">
+                {item.title}
+              </p>
+
+              {item.detail && (
+                <p className="mt-1 text-base leading-7 text-slate-800">
+                  {item.detail}
+                </p>
+              )}
+
+              {item.searchQuery && (
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(
+                    item.searchQuery,
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex min-h-11 items-center rounded-xl border-2 border-cyan-800 bg-white px-4 py-2 text-sm font-black text-cyan-950 underline decoration-2 underline-offset-4"
+                >
+                  Search this question
+                  <span className="sr-only">
+                    {" "}
+                    in a new tab
+                  </span>
+                </a>
+              )}
+            </div>
+          </li>
+        ),
+      )}
+    </ul>
+  );
 }
 
 export default function ActionPlan({
   groups,
   warningSignals,
+  specializedResult,
+  researchTasks = [],
 }: ActionPlanProps) {
   const preparedGroups =
-    prepareDecisionGroups(groups);
-
-  const gatherGroup =
-    preparedGroups.find(
-      (group) =>
-        group.id ===
-        "gather-information",
+    prepareDecisionGroups(
+      groups,
     );
 
-  const reviewGroups =
-    preparedGroups.filter(
-      (group) =>
-        group.id !==
-        "gather-information",
+  const gatherGroup =
+    groupById(
+      preparedGroups,
+      "gather-information",
+    );
+
+  const redGroup =
+    groupById(
+      preparedGroups,
+      "red-flags",
+    );
+
+  const greenGroup =
+    groupById(
+      preparedGroups,
+      "green-flags",
     );
 
   const thingsToCheck =
@@ -73,135 +285,152 @@ export default function ActionPlan({
       gatherGroup?.items ?? [],
     );
 
+  const specializedFindings =
+    specializedResult
+      ?.findings ?? [];
+
+  const negativeSpecialized =
+    specializedFindings.filter(
+      (finding) =>
+        finding.points < 0,
+    );
+
+  const positiveSpecialized =
+    specializedFindings.filter(
+      (finding) =>
+        finding.points >= 0,
+    );
+
+  const gatherItems =
+    uniqueItems([
+      ...genericItems(
+        gatherGroup?.items ?? [],
+        "gather",
+      ),
+      ...genericItems(
+        thingsToCheck,
+        "check",
+      ),
+      ...genericItems(
+        specializedResult
+          ?.questions ?? [],
+        "specialized-question",
+      ),
+      ...researchItems(
+        researchTasks,
+      ),
+    ]);
+
+  const concernSignals =
+    warningSignals.filter(
+      (signal) =>
+        signalScoreImpact(
+          signal,
+        ) < 0,
+    );
+
+  const supportingSignals =
+    warningSignals.filter(
+      (signal) =>
+        signalScoreImpact(
+          signal,
+        ) >= 0,
+    );
+
+  const concernItems =
+    uniqueItems([
+      ...genericItems(
+        redGroup?.items ?? [],
+        "red-question",
+      ),
+      ...signalItems(
+        concernSignals,
+      ),
+      ...specializedItems(
+        negativeSpecialized,
+      ),
+    ]);
+
+  const supportingItems =
+    uniqueItems([
+      ...genericItems(
+        greenGroup?.items ?? [],
+        "green-question",
+      ),
+      ...signalItems(
+        supportingSignals,
+      ),
+      ...specializedItems(
+        positiveSpecialized,
+      ),
+    ]);
+
   return (
-    <section className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8">
+    <section className="rounded-[2rem] border-2 border-slate-400 bg-white p-5 shadow-lg sm:p-8">
       <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
-        What to consider next
+        Next Steps
       </h2>
 
-      {gatherGroup && (
-        <article
-          className={`mt-6 rounded-3xl border-2 p-5 sm:p-6 ${groupClasses(
-            gatherGroup.id,
-          )}`}
-        >
-          <h3 className="text-2xl font-black text-slate-950">
-            {gatherGroup.title}
+      <p className="mt-3 max-w-4xl text-lg leading-8 text-slate-800">
+        Use this combined list to fill
+        information gaps, review concerns,
+        and confirm the evidence that supports
+        the opportunity. Repeated advice has
+        been removed.
+      </p>
+
+      {gatherItems.length > 0 && (
+        <section className="mt-6 rounded-3xl border-2 border-blue-700 bg-blue-50 p-5 sm:p-6">
+          <h3 className="text-2xl font-black text-blue-950">
+            Gather More Information
           </h3>
 
-          <p className="mt-2 text-base leading-7 text-slate-800">
-            Find only the details that are
-            still missing, add them to the
-            form above, and check the job
-            again.
+          <p className="mt-2 text-base leading-7 text-blue-950">
+            Research or ask only the questions
+            that remain unanswered.
           </p>
 
-          {gatherGroup.items.length >
-            0 && (
-            <ul className="mt-4 space-y-3">
-              {gatherGroup.items.map(
-                (item) => (
-                  <li
-                    key={item}
-                    className="flex gap-3 rounded-2xl bg-white p-4 text-base font-bold leading-7 text-slate-900"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="font-black"
-                    >
-                      •
-                    </span>
-
-                    <span>{item}</span>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
-
-          {thingsToCheck.length >
-            0 && (
-            <section className="mt-6 rounded-3xl border-2 border-amber-600 bg-amber-50 p-5">
-              <h4 className="text-2xl font-black text-amber-950">
-                Things to check
-              </h4>
-
-              <p className="mt-2 text-base leading-7 text-amber-950">
-                These questions come from
-                details that were missing,
-                unclear, or concerning.
-              </p>
-
-              <ul className="mt-4 space-y-3">
-                {thingsToCheck.map(
-                  (question) => (
-                    <li
-                      key={question}
-                      className="flex gap-3 rounded-2xl bg-white p-4 text-base font-bold leading-7 text-slate-900"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="font-black text-amber-800"
-                      >
-                        ?
-                      </span>
-
-                      <span>
-                        {question}
-                      </span>
-                    </li>
-                  ),
-                )}
-              </ul>
-            </section>
-          )}
-        </article>
+          <NextStepList
+            items={gatherItems}
+          />
+        </section>
       )}
 
-      <div className="mt-6 space-y-5">
-        {reviewGroups.map(
-          (group) => (
-            <article
-              key={group.id}
-              className={`rounded-3xl border-2 p-5 sm:p-6 ${groupClasses(
-                group.id,
-              )}`}
-            >
-              <h3 className="text-2xl font-black text-slate-950">
-                {group.title}
-              </h3>
+      {concernItems.length > 0 && (
+        <section className="mt-5 rounded-3xl border-2 border-red-700 bg-red-50 p-5 sm:p-6">
+          <h3 className="text-2xl font-black text-red-950">
+            Review Concerns
+          </h3>
 
-              <p className="mt-2 text-base leading-7 text-slate-800">
-                {group.summary}
-              </p>
+          <p className="mt-2 text-base leading-7 text-red-950">
+            Ask yourself whether each concern
+            has been resolved before applying,
+            paying, or sharing more information.
+          </p>
 
-              <ul className="mt-4 space-y-3">
-                {group.items.map(
-                  (question) => (
-                    <li
-                      key={question}
-                      className="flex gap-3 rounded-2xl bg-white p-4 text-base font-bold leading-7 text-slate-900"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="font-black"
-                      >
-                        {questionSymbol(
-                          group.id,
-                        )}
-                      </span>
+          <NextStepList
+            items={concernItems}
+          />
+        </section>
+      )}
 
-                      <span>
-                        {question}
-                      </span>
-                    </li>
-                  ),
-                )}
-              </ul>
-            </article>
-          ),
-        )}
-      </div>
+      {supportingItems.length > 0 && (
+        <section className="mt-5 rounded-3xl border-2 border-emerald-700 bg-emerald-50 p-5 sm:p-6">
+          <h3 className="text-2xl font-black text-emerald-950">
+            Review Supporting Evidence
+          </h3>
+
+          <p className="mt-2 text-base leading-7 text-emerald-950">
+            Confirm that these positive signals
+            come from reliable and current
+            sources.
+          </p>
+
+          <NextStepList
+            items={supportingItems}
+          />
+        </section>
+      )}
     </section>
   );
 }

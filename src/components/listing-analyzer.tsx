@@ -10,8 +10,8 @@ import {
 import ActionPlan from "@/components/action-plan";
 import JobHealthDashboard from "@/components/job-health-dashboard";
 import ReportHistory from "@/components/report-history";
-import ResearchAssistantPanel from "@/components/research-assistant-panel";
-import SpecializedProfilePanel from "@/components/specialized-profile-panel";
+import ResearchContributionPanel from "@/components/research-contribution-panel";
+
 import VerificationPanel from "@/components/verification-panel";
 
 import {
@@ -545,22 +545,7 @@ export default function ListingAnalyzer() {
               />
             </label>
 
-            <label className="mt-6 block">
-              <span className="text-lg font-black text-slate-950">Job URL</span>
-
-              <input
-                type="url"
-                value={form.listingUrl}
-                onChange={(event) =>
-                  updateField(
-                    "listingUrl",
-                    event.target.value,
-                  )
-                }
-                placeholder="Optional, but highly recommended — https://organization.org/careers/job-123"
-                className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200"
-              />
-            </label>
+            
 
             <button
               type="button"
@@ -606,9 +591,26 @@ export default function ListingAnalyzer() {
             Clear
           </button>
         </div>
-      </form>
 
-      <VerificationPanel
+          <div className="mt-6 space-y-4">
+<label className="mt-6 block">
+              <span className="text-lg font-black text-slate-950">Job URL</span>
+
+              <input
+                type="url"
+                value={form.listingUrl}
+                onChange={(event) =>
+                  updateField(
+                    "listingUrl",
+                    event.target.value,
+                  )
+                }
+                placeholder="Optional, but highly recommended — https://organization.org/careers/job-123"
+                className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200"
+              />
+            </label>
+
+<VerificationPanel
         form={form}
         analysisResult={
           analysisResult
@@ -620,10 +622,56 @@ export default function ListingAnalyzer() {
           handleVerificationChange
         }
       />
+          </div>
+      </form>
 
       {analysisResult &&
-        criticalSignals.length > 0 && (
-        <section
+  criticalSignals.length > 0 && (
+    <section
+      role="alert"
+      aria-live="assertive"
+      className="rounded-[2rem] border-4 border-red-800 bg-red-950 p-5 text-white shadow-lg sm:p-8"
+    >
+      <h2 className="text-3xl font-black sm:text-4xl">
+        Immediate Danger Warning
+      </h2>
+
+      <p className="mt-4 max-w-4xl text-lg font-bold leading-8 text-red-50">
+        Stop before sending money, depositing a check,
+        sharing account credentials, or providing sensitive
+        identity or banking information.
+      </p>
+
+      <ul className="mt-5 space-y-3">
+        {criticalSignals.map(
+          (signal) => (
+            <li
+              key={signal.id}
+              className="rounded-2xl border-2 border-red-300 bg-white p-4 text-slate-950"
+            >
+              <p className="text-lg font-black">
+                {signal.title}
+              </p>
+
+              <p className="mt-2 text-base leading-7">
+                {signal.explanation}
+              </p>
+            </li>
+          ),
+        )}
+      </ul>
+    </section>
+  )}
+
+      {jobHealthProfile && (
+        <>
+          <JobHealthDashboard
+            profile={
+              jobHealthProfile
+            }
+          />
+
+          <section
           role="alert"
           className="rounded-[2rem] border-4 border-red-700 bg-red-50 p-5 shadow-lg sm:p-8"
         >
@@ -647,29 +695,12 @@ export default function ListingAnalyzer() {
             )}
           </div>
         </section>
-      )}
-
-      {jobHealthProfile && (
-        <>
-          <JobHealthDashboard
-            profile={
-              jobHealthProfile
-            }
-          />
-
-          <SpecializedProfilePanel
-            result={
-              specializedResult
-            }
-          />
 
           <ActionPlan
             groups={nextStepGroups}
             warningSignals={warningSignals}
-          />
-
-          <ResearchAssistantPanel
-            tasks={buildResearchTasks(
+            specializedResult={specializedResult}
+            researchTasks={buildResearchTasks(
               form,
               analysisResult,
               verificationResult,
@@ -679,6 +710,17 @@ export default function ListingAnalyzer() {
         </>
       )}
 
+      <ResearchContributionPanel
+        form={form}
+        analysisResult={analysisResult}
+        profile={jobHealthProfile}
+        verificationAttempted={
+          verificationResult !== null
+        }
+        reconciliationAvailable={
+          reconciliationResult !== null
+        }
+      />
       <ReportHistory
         form={form}
         analysisResult={

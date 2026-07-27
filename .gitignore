@@ -49,3 +49,9 @@ apply_version*.py
 job-listing-reality-check-version*.zip
 __pycache__/
 *.pyc
+
+# Local Version 11 backups
+*.v11.bak
+
+# Local Version 12 backups
+*.v12.bak

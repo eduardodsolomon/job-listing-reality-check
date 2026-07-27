@@ -1,13 +1,35 @@
-import { analyzeListing } from "./analyze-listing";
-import type { AnalysisInput, AnalysisResult } from "./analysis-types";
-import { buildJobHealthProfile, type JobHealthProfile } from "./presentation";
-import { analyzeSpecializedProfile } from "./opportunity-analysis";
-import { applySpecializedProfile } from "./specialized-presentation";
-import type { OpportunitySubtype, OpportunityType } from "./specialized-analysis-types";
+import {
+  analyzeListing,
+} from "./analyze-listing";
+
+import type {
+  AnalysisInput,
+  AnalysisResult,
+} from "./analysis-types";
+
+import {
+  analyzeSpecializedProfile,
+} from "./opportunity-analysis";
+
+import {
+  buildJobHealthProfile,
+  type JobHealthProfile,
+} from "./presentation";
+
+import {
+  applySpecializedProfile,
+} from "./specialized-presentation";
+
+import type {
+  OpportunitySubtype,
+  OpportunityType,
+  SpecializedAnalysisResult,
+} from "./specialized-analysis-types";
 
 export const MAX_BATCH_JOBS = 25;
 
-export interface BatchJobInput extends AnalysisInput {
+export interface BatchJobInput
+  extends AnalysisInput {
   sourceRow: number;
 }
 
@@ -15,37 +37,58 @@ export interface BatchJobResult {
   input: BatchJobInput;
   analysis: AnalysisResult;
   profile: JobHealthProfile;
+  specialized:
+    SpecializedAnalysisResult | null;
 }
 
 export interface BatchParseResult {
   jobs: BatchJobInput[];
   errors: string[];
+  totalValidRows: number;
+  overflowCount: number;
 }
 
-const HEADER_ALIASES: Record<string, keyof AnalysisInput> = {
+const HEADER_ALIASES:
+  Record<
+    string,
+    keyof AnalysisInput
+  > = {
   company: "company",
   companyname: "company",
   employer: "company",
   employername: "company",
-  jobdescription: "listingText",
+  jobdescription:
+    "listingText",
   description: "listingText",
   listing: "listingText",
   listingtext: "listingText",
   joblisting: "listingText",
-  recruiter: "recruiterMessage",
-  recruitermessage: "recruiterMessage",
-  message: "recruiterMessage",
+  recruiter:
+    "recruiterMessage",
+  recruitermessage:
+    "recruiterMessage",
+  message:
+    "recruiterMessage",
   joburl: "listingUrl",
-  officialjoburl: "listingUrl",
+  officialjoburl:
+    "listingUrl",
   listingurl: "listingUrl",
   url: "listingUrl",
-  jobtype: "opportunityType",
-  opportunitytype: "opportunityType",
-  jobsubtype: "opportunitySubtype",
-  opportunitysubtype: "opportunitySubtype",
+  jobtype:
+    "opportunityType",
+  opportunitytype:
+    "opportunityType",
+  jobsubtype:
+    "opportunitySubtype",
+  opportunitysubtype:
+    "opportunitySubtype",
 };
 
-const TYPE_ALIASES: Record<string, OpportunityType> = {
+const TYPE_ALIASES:
+  Record<
+    string,
+    OpportunityType
+  > = {
   standard: "standard",
   employee: "standard",
   w2: "standard",
@@ -64,58 +107,117 @@ const TYPE_ALIASES: Record<string, OpportunityType> = {
   notsure: "not-sure",
 };
 
-function normalizeHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+function normalizeHeader(
+  value: string,
+): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(
+      /[^a-z0-9]+/g,
+      "",
+    );
 }
 
-function normalizeType(value: string): OpportunityType {
-  return TYPE_ALIASES[normalizeHeader(value)] ?? "not-sure";
+function normalizeType(
+  value: string,
+): OpportunityType {
+  return (
+    TYPE_ALIASES[
+      normalizeHeader(value)
+    ] ?? "not-sure"
+  );
 }
 
-function normalizeSubtype(value: string): OpportunitySubtype | undefined {
-  const normalized = value.trim();
-  return normalized ? normalized as OpportunitySubtype : undefined;
+function normalizeSubtype(
+  value: string,
+): OpportunitySubtype | undefined {
+  const normalized =
+    value.trim();
+
+  return normalized
+    ? normalized as OpportunitySubtype
+    : undefined;
 }
 
-function detectDelimiter(input: string): "," | "\t" {
-  const firstLine = input.split(/\r?\n/).find((line) => line.trim()) ?? "";
-  return firstLine.split("\t").length > firstLine.split(",").length ? "\t" : ",";
+function detectDelimiter(
+  input: string,
+): "," | "\t" {
+  const firstLine =
+    input
+      .split(/\r?\n/)
+      .find(
+        (line) => line.trim(),
+      ) ?? "";
+
+  return (
+    firstLine.split("\t").length >
+    firstLine.split(",").length
+  )
+    ? "\t"
+    : ",";
 }
 
-function parseDelimitedRows(input: string, delimiter: "," | "\t"): string[][] {
+function parseDelimitedRows(
+  input: string,
+  delimiter: "," | "\t",
+): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
   let quoted = false;
 
-  for (let index = 0; index < input.length; index += 1) {
-    const character = input[index];
+  for (
+    let index = 0;
+    index < input.length;
+    index += 1
+  ) {
+    const character =
+      input[index];
 
     if (character === '"') {
-      if (quoted && input[index + 1] === '"') {
+      if (
+        quoted &&
+        input[index + 1] === '"'
+      ) {
         cell += '"';
         index += 1;
       } else {
         quoted = !quoted;
       }
+
       continue;
     }
 
-    if (character === delimiter && !quoted) {
+    if (
+      character === delimiter &&
+      !quoted
+    ) {
       row.push(cell.trim());
       cell = "";
       continue;
     }
 
-    if ((character === "\n" || character === "\r") && !quoted) {
-      if (character === "\r" && input[index + 1] === "\n") {
+    if (
+      (character === "\n" ||
+        character === "\r") &&
+      !quoted
+    ) {
+      if (
+        character === "\r" &&
+        input[index + 1] === "\n"
+      ) {
         index += 1;
       }
 
       row.push(cell.trim());
       cell = "";
 
-      if (row.some((value) => value.trim())) {
+      if (
+        row.some(
+          (value) => value.trim(),
+        )
+      ) {
         rows.push(row);
       }
 
@@ -128,119 +230,232 @@ function parseDelimitedRows(input: string, delimiter: "," | "\t"): string[][] {
 
   row.push(cell.trim());
 
-  if (row.some((value) => value.trim())) {
+  if (
+    row.some(
+      (value) => value.trim(),
+    )
+  ) {
     rows.push(row);
   }
 
   return rows;
 }
 
-export function parseBatchJobs(input: string): BatchParseResult {
+function rowToInput(
+  values: string[],
+  headers: Array<
+    keyof AnalysisInput | undefined
+  >,
+  sourceRow: number,
+): BatchJobInput {
+  const draft:
+    AnalysisInput = {
+    company: "",
+    listingUrl: "",
+    listingText: "",
+    recruiterMessage: "",
+    opportunityType:
+      "standard",
+    opportunitySubtype:
+      undefined,
+  };
+
+  headers.forEach(
+    (header, column) => {
+      if (!header) {
+        return;
+      }
+
+      const value =
+        values[column] ?? "";
+
+      if (
+        header ===
+        "opportunityType"
+      ) {
+        draft.opportunityType =
+          normalizeType(value);
+        return;
+      }
+
+      if (
+        header ===
+        "opportunitySubtype"
+      ) {
+        draft.opportunitySubtype =
+          normalizeSubtype(value);
+        return;
+      }
+
+      draft[header] = value;
+    },
+  );
+
+  return {
+    ...draft,
+    sourceRow,
+  };
+}
+
+export function parseBatchJobs(
+  input: string,
+): BatchParseResult {
   const errors: string[] = [];
 
   if (!input.trim()) {
     return {
       jobs: [],
-      errors: ["Paste CSV or TSV data, or upload a file."],
+      errors: [
+        "Paste CSV or TSV data, or upload a file.",
+      ],
+      totalValidRows: 0,
+      overflowCount: 0,
     };
   }
 
-  const rows = parseDelimitedRows(input, detectDelimiter(input));
+  const rows =
+    parseDelimitedRows(
+      input,
+      detectDelimiter(input),
+    );
 
   if (rows.length < 2) {
     return {
       jobs: [],
-      errors: ["Include a header row and at least one job."],
+      errors: [
+        "Include a header row and at least one job.",
+      ],
+      totalValidRows: 0,
+      overflowCount: 0,
     };
   }
 
-  const headers = rows[0].map(
-    (header) => HEADER_ALIASES[normalizeHeader(header)],
-  );
+  const headers =
+    rows[0].map(
+      (header) =>
+        HEADER_ALIASES[
+          normalizeHeader(header)
+        ],
+    );
 
-  if (!headers.includes("listingText")) {
+  if (
+    !headers.includes(
+      "listingText",
+    )
+  ) {
     return {
       jobs: [],
-      errors: ['The file needs a "job_description" column.'],
+      errors: [
+        'The file needs a "job_description" column.',
+      ],
+      totalValidRows: 0,
+      overflowCount: 0,
     };
   }
 
-  const dataRows = rows.slice(1);
+  const validJobs:
+    BatchJobInput[] = [];
 
-  if (dataRows.length > MAX_BATCH_JOBS) {
-    errors.push(`Only the first ${MAX_BATCH_JOBS} jobs were analyzed.`);
+  rows
+    .slice(1)
+    .forEach(
+      (values, index) => {
+        const sourceRow =
+          index + 2;
+
+        const job =
+          rowToInput(
+            values,
+            headers,
+            sourceRow,
+          );
+
+        if (
+          !job.listingText.trim()
+        ) {
+          errors.push(
+            `Row ${sourceRow} was skipped because the job description is empty.`,
+          );
+          return;
+        }
+
+        validJobs.push(job);
+      },
+    );
+
+  const totalValidRows =
+    validJobs.length;
+
+  const overflowCount =
+    Math.max(
+      0,
+      totalValidRows -
+        MAX_BATCH_JOBS,
+    );
+
+  if (overflowCount > 0) {
+    errors.push(
+      `${overflowCount} additional valid ${overflowCount === 1 ? "job was" : "jobs were"} not analyzed. The batch limit is ${MAX_BATCH_JOBS}.`,
+    );
   }
 
-  const jobs: BatchJobInput[] = [];
-
-  dataRows.slice(0, MAX_BATCH_JOBS).forEach((values, index) => {
-    const sourceRow = index + 2;
-
-    const draft: AnalysisInput = {
-      company: "",
-      listingUrl: "",
-      listingText: "",
-      recruiterMessage: "",
-      opportunityType: "standard",
-      opportunitySubtype: undefined,
-    };
-
-    headers.forEach((header, column) => {
-      if (!header) {
-        return;
-      }
-
-      const value = values[column] ?? "";
-
-      if (header === "opportunityType") {
-        draft.opportunityType = normalizeType(value);
-        return;
-      }
-
-      if (header === "opportunitySubtype") {
-        draft.opportunitySubtype = normalizeSubtype(value);
-        return;
-      }
-
-      draft[header] = value;
-    });
-
-    if (!draft.listingText.trim()) {
-      errors.push(
-        `Row ${sourceRow} was skipped because the job description is empty.`,
-      );
-      return;
-    }
-
-    jobs.push({
-      ...draft,
-      sourceRow,
-    });
-  });
-
-  return { jobs, errors };
+  return {
+    jobs:
+      validJobs.slice(
+        0,
+        MAX_BATCH_JOBS,
+      ),
+    errors,
+    totalValidRows,
+    overflowCount,
+  };
 }
 
-export function analyzeBatchJobs(jobs: BatchJobInput[]): BatchJobResult[] {
-  return jobs.map((input) => {
-    const analysis = analyzeListing(input);
-    const baseProfile = buildJobHealthProfile(analysis);
-    const specialized = analyzeSpecializedProfile(input);
-    const profile = applySpecializedProfile(baseProfile, specialized);
+export function analyzeBatchJobs(
+  jobs: BatchJobInput[],
+): BatchJobResult[] {
+  return jobs
+    .slice(
+      0,
+      MAX_BATCH_JOBS,
+    )
+    .map((input) => {
+      const analysis =
+        analyzeListing(input);
 
-    return {
-      input,
-      analysis,
-      profile,
-    };
-  });
+      const baseProfile =
+        buildJobHealthProfile(
+          analysis,
+        );
+
+      const specialized =
+        analyzeSpecializedProfile(
+          input,
+        );
+
+      const profile =
+        applySpecializedProfile(
+          baseProfile,
+          specialized,
+        );
+
+      return {
+        input,
+        analysis,
+        profile,
+        specialized,
+      };
+    });
 }
 
 export function batchResultMatches(
   result: BatchJobResult,
   query: string,
 ): boolean {
-  const normalized = query.trim().toLowerCase();
+  const normalized =
+    query
+      .trim()
+      .toLowerCase();
 
   if (!normalized) {
     return true;
@@ -255,14 +470,22 @@ export function batchResultMatches(
     result.input.opportunitySubtype,
     result.profile.overallLabel,
     ...result.analysis.signals.map(
-      (signal) => `${signal.title} ${signal.explanation}`,
+      (signal) =>
+        `${signal.title} ${signal.explanation}`,
     ),
+    ...(result.specialized
+      ?.findings.map(
+        (finding) =>
+          `${finding.title} ${finding.explanation} ${finding.nextStep}`,
+      ) ?? []),
   ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
-  return searchable.includes(normalized);
+  return searchable.includes(
+    normalized,
+  );
 }
 
 export const BATCH_TEMPLATE = [
@@ -275,10 +498,10 @@ export const BATCH_TEMPLATE = [
     "job_subtype",
   ].join(","),
   [
-    "Example Company",
+    "Acme Health",
     '"Paste the complete job description here"',
     '"Optional recruiter message"',
-    "https://example.com/jobs/123",
+    "https://organization.org/careers/job-123",
     "standard",
     "",
   ].join(","),

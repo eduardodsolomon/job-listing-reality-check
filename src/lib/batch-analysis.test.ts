@@ -14,7 +14,7 @@ describe("batch analysis", () => {
   it("requires the job-description column", () => {
     const parsed =
       parseBatchJobs(
-        "company,url\nExample,https://example.com",
+        "company,url\nAcme,https://organization.org",
       );
 
     expect(
@@ -33,7 +33,7 @@ describe("batch analysis", () => {
       parseBatchJobs(
         [
           "company,job_description,job_type",
-          'Example,"Data analyst with salary range $70,000 to $80,000",standard',
+          'Acme,"Data analyst with salary range $70,000 to $80,000",standard',
           "Missing,,contract",
         ].join("\n"),
       );
@@ -49,13 +49,13 @@ describe("batch analysis", () => {
     );
   });
 
-  it("limits the batch to 25 jobs", () => {
+  it("never returns a twenty-sixth valid job", () => {
     const rows = [
       "company,job_description",
       ...Array.from(
-        { length: 30 },
+        { length: 26 },
         (_, index) =>
-          `Company ${index},Description ${index}`,
+          `Company ${index + 1},Description ${index + 1}`,
       ),
     ];
 
@@ -69,14 +69,71 @@ describe("batch analysis", () => {
     ).toHaveLength(
       MAX_BATCH_JOBS,
     );
+
+    expect(
+      parsed.jobs.some(
+        (job) =>
+          job.company ===
+          "Company 26",
+      ),
+    ).toBe(false);
+
+    expect(
+      parsed.overflowCount,
+    ).toBe(1);
+
+    expect(
+      parsed.errors.join(" "),
+    ).toContain(
+      "batch limit is 25",
+    );
   });
 
-  it("creates score profiles for parsed jobs", () => {
+  it("caps direct analysis input at 25 jobs", () => {
     const parsed =
       parseBatchJobs(
         [
           "company,job_description",
-          'Example,"Data Analyst salary range $70,000 to $80,000"',
+          ...Array.from(
+            { length: 25 },
+            (_, index) =>
+              `Company ${index + 1},Description ${index + 1}`,
+          ),
+        ].join("\n"),
+      );
+
+    const duplicated = [
+      ...parsed.jobs,
+      {
+        ...parsed.jobs[0],
+        company:
+          "Unexpected 26th job",
+        sourceRow: 27,
+      },
+    ];
+
+    const results =
+      analyzeBatchJobs(
+        duplicated,
+      );
+
+    expect(results).toHaveLength(25);
+
+    expect(
+      results.some(
+        (result) =>
+          result.input.company ===
+          "Unexpected 26th job",
+      ),
+    ).toBe(false);
+  });
+
+  it("creates capped score profiles", () => {
+    const parsed =
+      parseBatchJobs(
+        [
+          "company,job_description",
+          'Acme,"Data Analyst salary range $70,000 to $80,000"',
         ].join("\n"),
       );
 
@@ -85,9 +142,7 @@ describe("batch analysis", () => {
         parsed.jobs,
       );
 
-    expect(
-      results,
-    ).toHaveLength(1);
+    expect(results).toHaveLength(1);
 
     expect(
       results[0].profile

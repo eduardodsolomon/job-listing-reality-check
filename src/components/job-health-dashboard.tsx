@@ -1,458 +1,247 @@
 import type {
-  EvidenceDetail,
-  EvidenceDetailTone,
   HealthBand,
   JobHealthMetric,
   JobHealthProfile,
 } from "@/lib/presentation";
 
 interface JobHealthDashboardProps {
-  profile: JobHealthProfile;
+  profile?: JobHealthProfile;
+  jobHealthProfile?: JobHealthProfile;
+  healthProfile?: JobHealthProfile;
+  [key: string]: unknown;
 }
 
-interface Tone {
-  card: string;
-  badge: string;
-  bar: string;
-  ring: string;
-  symbol: string;
-}
-
-function toneForBand(
+function bandClasses(
   band: HealthBand,
-): Tone {
+): string {
   switch (band) {
     case "excellent":
-      return {
-        card:
-          "border-emerald-700 bg-emerald-50",
-        badge:
-          "border-emerald-700 bg-white text-emerald-950",
-        bar: "bg-emerald-700",
-        ring: "#047857",
-        symbol: "✓",
-      };
-
     case "good":
-      return {
-        card:
-          "border-green-600 bg-green-50",
-        badge:
-          "border-green-600 bg-white text-green-950",
-        bar: "bg-green-600",
-        ring: "#16a34a",
-        symbol: "✓",
-      };
+      return "border-emerald-700 bg-emerald-50 text-emerald-950";
 
     case "fair":
-      return {
-        card:
-          "border-amber-500 bg-amber-50",
-        badge:
-          "border-amber-500 bg-white text-amber-950",
-        bar: "bg-amber-500",
-        ring: "#f59e0b",
-        symbol: "!",
-      };
+      return "border-amber-700 bg-amber-50 text-amber-950";
 
     case "poor":
-      return {
-        card:
-          "border-orange-700 bg-orange-50",
-        badge:
-          "border-orange-700 bg-white text-orange-950",
-        bar: "bg-orange-700",
-        ring: "#c2410c",
-        symbol: "!",
-      };
+      return "border-orange-700 bg-orange-50 text-orange-950";
 
     case "critical":
-      return {
-        card:
-          "border-red-700 bg-red-50",
-        badge:
-          "border-red-700 bg-white text-red-950",
-        bar: "bg-red-700",
-        ring: "#b91c1c",
-        symbol: "⛔",
-      };
+      return "border-red-700 bg-red-50 text-red-950";
 
     default:
-      return {
-        card:
-          "border-slate-400 bg-slate-100",
-        badge:
-          "border-slate-400 bg-white text-slate-900",
-        bar: "bg-slate-400",
-        ring: "#94a3b8",
-        symbol: "?",
-      };
+      return "border-slate-500 bg-slate-100 text-slate-950";
   }
 }
 
-function evidenceClasses(
-  tone: EvidenceDetailTone,
+function scoreDescriptor(
+  metric: JobHealthMetric,
 ): string {
-  switch (tone) {
-    case "positive":
-      return "border-emerald-600 bg-emerald-50";
+  if (metric.score === null) {
+    return "Missing";
+  }
 
-    case "warning":
-      return "border-red-700 bg-red-50";
+  switch (metric.band) {
+    case "excellent":
+      return "Very strong";
+
+    case "good":
+      return "Strong";
+
+    case "fair":
+      return "Mixed";
+
+    case "poor":
+      return "Weak";
+
+    case "critical":
+      return "Critical";
 
     default:
-      return "border-blue-500 bg-blue-50";
+      return "Not enough evidence";
   }
 }
 
-function pointClasses(
-  tone: EvidenceDetailTone,
+function metricExplanation(
+  metric: JobHealthMetric,
 ): string {
-  switch (tone) {
-    case "positive":
-      return "border-emerald-700 bg-emerald-700 text-white";
+  const extended =
+    metric as JobHealthMetric & {
+      summary?: string;
+      description?: string;
+      explanation?: string;
+    };
 
-    case "warning":
-      return "border-red-700 bg-red-700 text-white";
+  return (
+    extended.summary ??
+    extended.description ??
+    extended.explanation ??
+    "This score reflects the information currently available."
+  );
+}
+
+function formulaForMetric(
+  metric: JobHealthMetric,
+): string {
+  switch (metric.id) {
+    case "listing-quality":
+      return "100 minus ghost-job risk, plus applicable job-type and applicant-protection adjustments.";
+
+    case "personal-safety":
+      return "100 minus scam and phishing risk, plus applicable applicant-protection adjustments.";
+
+    case "evidence-quality":
+      return "The evidence-confidence score after available URL verification and reconciliation.";
 
     default:
-      return "border-blue-700 bg-blue-700 text-white";
+      return "Calculated from the available scoring evidence.";
   }
 }
 
-function pointsText(
-  points: number,
-): string {
-  if (points > 0) {
-    return `+${points}`;
-  }
-
-  return String(points);
-}
-
-function evidenceSymbol(
-  tone: EvidenceDetailTone,
-): string {
-  switch (tone) {
-    case "positive":
-      return "↑";
-
-    case "warning":
-      return "↓";
-
-    default:
-      return "•";
-  }
-}
-
-function EvidenceRow({
-  evidence,
+function ScoreCircle({
+  score,
+  band,
 }: {
-  evidence: EvidenceDetail;
+  score: number | null;
+  band: HealthBand;
 }) {
   return (
-    <li
-      className={`rounded-2xl border-2 p-4 ${evidenceClasses(
-        evidence.tone,
+    <span
+      className={`inline-flex h-20 min-w-20 shrink-0 items-center justify-center rounded-full border-4 px-3 text-3xl font-black ${bandClasses(
+        band,
       )}`}
     >
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-current bg-white text-lg font-black"
-        >
-          {evidenceSymbol(
-            evidence.tone,
-          )}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold leading-7 text-slate-950">
-            {evidence.statement}
-          </p>
-        </div>
-
-        <span
-          aria-label={`${pointsText(
-            evidence.points,
-          )} evidence points`}
-          className={`shrink-0 rounded-full border-2 px-3 py-1 text-base font-black ${pointClasses(
-            evidence.tone,
-          )}`}
-        >
-          {pointsText(
-            evidence.points,
-          )}
-        </span>
-      </div>
-    </li>
-  );
-}
-
-function EvidenceDetails({
-  metric,
-}: {
-  metric: JobHealthMetric;
-}) {
-  const evidenceDetails =
-    metric.evidenceDetails ?? [];
-
-  return (
-    <div className="mt-5 space-y-4">
-      {metric.scoreNote && (
-        <div className="rounded-2xl border-2 border-violet-600 bg-violet-50 p-4 text-base font-bold leading-7 text-violet-950">
-          {metric.scoreNote}
-        </div>
-      )}
-
-      <section className="rounded-2xl border-2 border-slate-400 bg-white p-4">
-        <h4 className="text-xl font-black text-slate-950">
-          How this score was calculated
-        </h4>
-
-        <p className="mt-2 text-base leading-7 text-slate-700">
-          Green findings added points. Red
-          findings removed points. Blue
-          findings were recorded but did not
-          directly change the score.
-        </p>
-
-        {evidenceDetails.length > 0 ? (
-          <ul className="mt-4 space-y-3">
-            {evidenceDetails.map(
-              (evidence) => (
-                <EvidenceRow
-                  key={evidence.id}
-                  evidence={evidence}
-                />
-              ),
-            )}
-          </ul>
-        ) : (
-          <p className="mt-4 rounded-2xl border-2 border-dashed border-slate-400 bg-slate-50 p-4 text-base font-bold leading-7 text-slate-800">
-            No supporting evidence was found
-            yet.
-          </p>
-        )}
-      </section>
-
-      {metric.improvementPrompt && (
-        <section className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-4">
-          <h4 className="text-lg font-black text-blue-950">
-            Add more information
-          </h4>
-
-          <p className="mt-2 text-base font-bold leading-7 text-blue-950">
-            {
-              metric.improvementPrompt
-            }
-          </p>
-
-          <p className="mt-3 text-base leading-7 text-blue-950">
-            Useful details may be available
-            on the employer’s official careers
-            website or from the recruiter or
-            hiring manager.
-          </p>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function MetricCard({
-  metric,
-}: {
-  metric: JobHealthMetric;
-}) {
-  const tone =
-    toneForBand(metric.band);
-
-  return (
-    <article
-      className={`rounded-3xl border-2 p-5 sm:p-6 ${tone.card}`}
-    >
-      <div className="flex items-start gap-4">
-        <span
-          aria-hidden="true"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-current bg-white text-xl font-black"
-        >
-          {tone.symbol}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <h3 className="text-xl font-black text-slate-950">
-              {metric.label}
-            </h3>
-
-            <span
-              className={`w-fit rounded-full border-2 px-3 py-1 text-sm font-black ${tone.badge}`}
-            >
-              {metric.statusLabel}
-            </span>
-          </div>
-
-          {metric.score === null ? (
-            <div className="mt-5 rounded-2xl border-2 border-dashed border-slate-500 bg-white p-5">
-              <p className="text-4xl font-black text-slate-950">
-                ?
-              </p>
-
-              <p className="mt-2 text-base font-black text-slate-900">
-                Provide more information to
-                reveal this score
-              </p>
-            </div>
-          ) : (
-            <div className="mt-5">
-              <div className="flex items-end gap-2">
-                <span className="text-4xl font-black text-slate-950">
-                  {metric.score}
-                </span>
-              </div>
-
-              <div
-                role="meter"
-                aria-label={metric.label}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={
-                  metric.score
-                }
-                aria-valuetext={`${metric.score} out of 100, ${metric.statusLabel}`}
-                className="mt-3 h-5 overflow-hidden rounded-full border-2 border-slate-500 bg-white"
-              >
-                <div
-                  className={`h-full ${tone.bar}`}
-                  style={{
-                    width: `${metric.score}%`,
-                  }}
-                />
-              </div>
-
-              <div className="mt-2 flex justify-between text-sm font-bold text-slate-700">
-                <span>0 = poor</span>
-                <span>100 = strong</span>
-              </div>
-            </div>
-          )}
-
-          <p className="mt-5 text-base leading-7 text-slate-800">
-            {metric.explanation}
-          </p>
-
-          {metric.id ===
-            "evidence-quality" && (
-            <EvidenceDetails
-              metric={metric}
-            />
-          )}
-        </div>
-      </div>
-    </article>
+      {score ?? "?"}
+    </span>
   );
 }
 
 export default function JobHealthDashboard({
   profile,
+  jobHealthProfile,
+  healthProfile,
 }: JobHealthDashboardProps) {
-  const tone =
-    toneForBand(
-      profile.overallBand,
-    );
+  const resolvedProfile =
+    profile ??
+    jobHealthProfile ??
+    healthProfile;
 
-  const degrees =
-    profile.overallScore * 3.6;
+  if (!resolvedProfile) {
+    return null;
+  }
 
   return (
-    <section
-      aria-labelledby="job-health-heading"
-      className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8"
-    >
-      <div className="grid items-center gap-8 lg:grid-cols-[auto_1fr]">
-        <div className="flex justify-center">
-          <div
-            role="meter"
-            aria-label="Overall job health"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={
-              profile.overallScore
-            }
-            aria-valuetext={`${profile.overallScore} out of 100, ${profile.overallLabel}`}
-            className="flex h-52 w-52 items-center justify-center rounded-full p-4 sm:h-60 sm:w-60"
-            style={{
-              background: `conic-gradient(${tone.ring} ${degrees}deg, #e2e8f0 ${degrees}deg)`,
-            }}
-          >
-            <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-white text-center shadow-inner">
-              <span className="text-sm font-black uppercase tracking-widest text-slate-600">
-                Job health
-              </span>
-
-              <span className="mt-1 text-6xl font-black text-slate-950">
-                {profile.overallScore}
-              </span>
-
-              <span
-                className={`mt-3 rounded-full border-2 px-4 py-1 text-base font-black ${tone.badge}`}
-              >
-                {profile.overallLabel}
-              </span>
-            </div>
-          </div>
-        </div>
-
+    <section className="rounded-[2rem] border-2 border-slate-400 bg-white p-5 shadow-lg sm:p-8">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-
-          <h2
-            id="job-health-heading"
-            className="mt-2 text-3xl font-black leading-tight text-slate-950 sm:text-4xl"
-          >
-            Your overall job-health score
+          <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
+            Sanity Score
           </h2>
 
-          <p className="mt-4 text-lg leading-8 text-slate-800">
-            {profile.summary}
+          <p className="mt-3 max-w-3xl text-lg leading-8 text-slate-800">
+            {resolvedProfile.overallLabel}
+            {" — "}
+            {resolvedProfile.overallScore}
+            {" points based on the available Listing Quality, Personal Safety, and Evidence Quality scores."}
           </p>
-
-          <div className="mt-5 rounded-2xl border-2 border-slate-300 bg-slate-50 p-4 text-base font-bold leading-7 text-slate-800">
-            <p>
-              This average uses{" "}
-              {profile.scoreCount} of the 3
-              scores below.
-            </p>
-
-            {profile.evidenceQualityMissing && (
-              <p className="mt-2">
-                Evidence quality is omitted
-                until more information is
-                provided.
-              </p>
-            )}
-
-            {profile.urlEvidenceIncluded && (
-              <p className="mt-2 text-violet-900">
-                ✓ The URL findings are included
-                in Evidence quality and Job
-                health.
-              </p>
-            )}
-          </div>
         </div>
+
+        <ScoreCircle
+          score={
+            resolvedProfile.overallScore
+          }
+          band={
+            resolvedProfile.overallBand
+          }
+        />
       </div>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-3">
-        {profile.metrics.map(
+      <div className="mt-7 grid gap-5 lg:grid-cols-3">
+        {resolvedProfile.metrics.map(
           (metric) => (
-            <MetricCard
+            <article
               key={metric.id}
-              metric={metric}
-            />
+              className={`rounded-3xl border-2 p-5 ${bandClasses(
+                metric.band,
+              )}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-black">
+                    {metric.label}
+                  </h3>
+
+                  <p className="mt-1 text-base font-black">
+                    {scoreDescriptor(
+                      metric,
+                    )}
+                    {metric.score ===
+                    null
+                      ? " — score unavailable"
+                      : ` — ${metric.score} points`}
+                  </p>
+                </div>
+
+                <ScoreCircle
+                  score={metric.score}
+                  band={metric.band}
+                />
+              </div>
+
+              <p className="mt-4 text-base leading-7">
+                {metricExplanation(
+                  metric,
+                )}
+              </p>
+            </article>
           ),
         )}
       </div>
+
+      <details className="mt-7 rounded-3xl border-2 border-slate-500 bg-slate-50 p-5">
+        <summary className="cursor-pointer text-xl font-black text-slate-950">
+          Final Scoring Receipt
+        </summary>
+
+        <div className="mt-5 space-y-4">
+          {resolvedProfile.metrics.map(
+            (metric) => (
+              <div
+                key={`receipt-${metric.id}`}
+                className="rounded-2xl border-2 border-slate-300 bg-white p-4"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="font-black text-slate-950">
+                    {metric.label}
+                  </p>
+
+                  <p className="font-black text-slate-950">
+                    {metric.score ===
+                    null
+                      ? "Not included"
+                      : `${metric.score} points`}
+                  </p>
+                </div>
+
+                <p className="mt-2 text-base leading-7 text-slate-800">
+                  {formulaForMetric(
+                    metric,
+                  )}
+                </p>
+              </div>
+            ),
+          )}
+
+          <div className="rounded-2xl border-2 border-violet-700 bg-violet-50 p-4 text-violet-950">
+            <p className="font-black">
+              Final Sanity Score: {resolvedProfile.overallScore} points
+            </p>
+
+            <p className="mt-2 text-base leading-7">
+              The final score is the rounded-up average of every available metric. Missing metrics are not averaged. Every score is capped between 0 and 100.
+            </p>
+          </div>
+        </div>
+      </details>
     </section>
   );
 }
