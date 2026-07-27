@@ -81,7 +81,7 @@ export default function SpecializedProfilePanel({
   return (
     <section className="rounded-[2rem] border-2 border-indigo-500 bg-white p-5 shadow-lg sm:p-8">
       <p className="text-base font-black uppercase tracking-widest text-indigo-800">
-        Extra job-type checks
+        Extra job-type and applicant-protection checks
       </p>
 
       <h2 className="mt-2 text-3xl font-black text-slate-950">

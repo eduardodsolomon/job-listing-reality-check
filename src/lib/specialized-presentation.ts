@@ -23,7 +23,7 @@ function average(
     return 0;
   }
 
-  return Math.round(
+  return Math.ceil(
     values.reduce(
       (total, value) =>
         total + value,

@@ -35,7 +35,7 @@ import type {
   SavedReportDraft,
 } from "@/lib/saved-report-types";
 
-import { analyzeSpecializedProfile } from "@/lib/specialized-analysis";
+import { analyzeSpecializedProfile } from "@/lib/opportunity-analysis";
 
 import { applySpecializedProfile } from "@/lib/specialized-presentation";
 

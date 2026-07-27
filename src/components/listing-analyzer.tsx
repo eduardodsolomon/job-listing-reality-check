@@ -29,7 +29,7 @@ import {
 
 import type { ReconciliationResult } from "@/lib/reconciliation-types";
 
-import { analyzeSpecializedProfile } from "@/lib/specialized-analysis";
+import { analyzeSpecializedProfile } from "@/lib/opportunity-analysis";
 
 import {
   applySpecializedProfile,

@@ -100,7 +100,7 @@ function average(
     0,
   );
 
-  return Math.round(
+  return Math.ceil(
     total / values.length,
   );
 }
@@ -309,7 +309,7 @@ function evidenceQualityScore(
     verification &&
     textEvidenceAvailable
   ) {
-    return Math.round(
+    return Math.ceil(
       (
         clamp(analysis.confidence) +
         verificationEvidenceScore(
