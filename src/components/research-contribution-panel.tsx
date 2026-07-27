@@ -141,6 +141,10 @@ export default function ResearchContributionPanel({
     }
 
     try {
+      if (!preview) {
+        return;
+      }
+
       const updated =
         saveResearchContribution(
           preview,
