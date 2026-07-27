@@ -383,9 +383,14 @@ describe(
         ).toBeLessThan(0);
 
         expect(
-          specialized?.adjustments
-            .listingQuality,
-        ).toBeLessThan(0);
+          specialized?.findings.some(
+            (finding) =>
+              finding.points < 0 &&
+              /unpaid|fee|supervision/i.test(
+                `${finding.title} ${finding.explanation}`,
+              ),
+          ),
+        ).toBe(true);
       },
     );
 

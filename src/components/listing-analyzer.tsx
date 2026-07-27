@@ -429,7 +429,7 @@ export default function ListingAnalyzer() {
                 event.target.value,
               )
             }
-            placeholder="Optional — Example: Example Health; recruiting agency: Talent Partners"
+            placeholder="Optional — Acme Health; recruiting agency: Talent Partners"
             className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
           />
         </label>
@@ -446,7 +446,7 @@ export default function ListingAnalyzer() {
                   event.target.value,
                 )
               }
-              placeholder="Required — Paste as much information about the listing as you can find. Example: job title, company, pay, location, schedule, duties, qualifications, benefits, job number, and application instructions."
+              placeholder="Required — Paste as much information about the listing as you can find. Include the job title, company, pay, location, schedule, duties, qualifications, benefits, job number, and application instructions."
               required
               className="mt-2 min-h-96 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
             />
@@ -540,7 +540,7 @@ export default function ListingAnalyzer() {
                     event.target.value,
                   )
                 }
-                placeholder="Optional — Example: recruiter email, text, LinkedIn message, agency name, contact details, interview details, or follow-up answers."
+                placeholder="Optional — Paste the recruiter email, text, LinkedIn message, agency name, contact details, interview details, or follow-up answers."
                 className="mt-2 min-h-64 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
               />
             </label>
@@ -557,7 +557,7 @@ export default function ListingAnalyzer() {
                     event.target.value,
                   )
                 }
-                placeholder="Optional, but highly recommended — Example: https://organization.org/careers/job-123"
+                placeholder="Optional, but highly recommended — https://organization.org/careers/job-123"
                 className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200"
               />
             </label>

@@ -685,10 +685,19 @@ function analyzeInternship(
         : "How many hours per week are expected?",
   });
 
-  const supervisionFound = has(
+  const supervisionMentioned = has(
     text,
     /supervisor|supervision|mentor|mentorship|learning plan|training plan|professional development/i,
   );
+
+  const supervisionDenied = has(
+    text,
+    /(?:no|without)\s+(?:regular\s+)?(?:supervision|supervisor|mentor|mentorship|training|professional development)|(?:supervision|supervisor|mentor|mentorship|training|professional development)[^.!?\n]{0,60}(?:(?:is|are|was|were)\s+)?(?:not provided|not included|not available|unavailable|none)/i,
+  );
+
+  const supervisionFound =
+    supervisionMentioned &&
+    !supervisionDenied;
 
   addFinding(builder, {
     id: "internship-supervision",

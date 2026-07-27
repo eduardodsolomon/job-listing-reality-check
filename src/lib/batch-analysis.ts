@@ -5,7 +5,7 @@ import { analyzeSpecializedProfile } from "./opportunity-analysis";
 import { applySpecializedProfile } from "./specialized-presentation";
 import type { OpportunitySubtype, OpportunityType } from "./specialized-analysis-types";
 
-export const MAX_BATCH_JOBS = 50;
+export const MAX_BATCH_JOBS = 25;
 
 export interface BatchJobInput extends AnalysisInput {
   sourceRow: number;

@@ -119,7 +119,7 @@ function requests(
 ): boolean {
   const requestBefore =
     new RegExp(
-      String.raw`(?:send|share|provide|submit|give|tell|reply with|upload|enter|confirm)[^.!?\n]{0,80}(?:${subject.source})`,
+      String.raw`(?:send|share|provide|submit|give|tell|reply with|upload|enter|confirm|complete|fill out|fill in)[^.!?\n]{0,80}(?:${subject.source})`,
       "i",
     );
 
@@ -248,7 +248,7 @@ export function analyzeApplicantProtection(
   const financialRequest =
     requests(
       text,
-      /social security number|social security|ssn|bank account|routing number|credit card|debit card|taxpayer identification number|tax id/,
+      /social security number|social security|ssn|bank account|routing number|credit card|debit card|direct[- ]deposit information|direct[- ]deposit form|direct deposit|taxpayer identification number|tax id/,
     );
 
   if (financialRequest) {

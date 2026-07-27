@@ -57,7 +57,7 @@ export default function JobRealityWorkspace() {
               : "bg-slate-100 text-slate-900"
           }`}
         >
-          Check up to 50 jobs
+          Check up to 25 jobs
         </button>
       </div>
 

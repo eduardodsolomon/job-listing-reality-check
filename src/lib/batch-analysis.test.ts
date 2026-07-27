@@ -49,11 +49,11 @@ describe("batch analysis", () => {
     );
   });
 
-  it("limits the batch to 50 jobs", () => {
+  it("limits the batch to 25 jobs", () => {
     const rows = [
       "company,job_description",
       ...Array.from(
-        { length: 55 },
+        { length: 30 },
         (_, index) =>
           `Company ${index},Description ${index}`,
       ),
