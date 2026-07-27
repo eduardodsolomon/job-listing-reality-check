@@ -23,7 +23,7 @@ function normalizeText(value: string): string {
 }
 
 function clampScore(value: number): number {
-  return Math.max(0, Math.min(100, Math.round(value)));
+  return Math.max(0, Math.min(100, Math.ceil(value)));
 }
 
 function riskLabel(score: number): RiskLabel {

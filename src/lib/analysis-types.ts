@@ -1,21 +1,41 @@
-export type SignalType = "positive" | "warning" | "critical";
+import type {
+  OpportunitySubtype,
+  OpportunityType,
+} from "./specialized-analysis-types";
 
-export type ScoreTarget = "ghost" | "scam" | "confidence";
+export type SignalType =
+  | "positive"
+  | "warning"
+  | "critical";
+
+export type ScoreTarget =
+  | "ghost"
+  | "scam"
+  | "confidence";
 
 export type RuleCategory =
   | "listing-quality"
   | "phishing-safety"
   | "evidence-quality";
 
-export type RiskLabel = "Low" | "Moderate" | "High" | "Critical";
+export type RiskLabel =
+  | "Low"
+  | "Moderate"
+  | "High"
+  | "Critical";
 
-export type ConfidenceLabel = "Low" | "Moderate" | "High";
+export type ConfidenceLabel =
+  | "Low"
+  | "Moderate"
+  | "High";
 
 export interface AnalysisInput {
   company: string;
   listingUrl: string;
   listingText: string;
   recruiterMessage: string;
+  opportunityType?: OpportunityType;
+  opportunitySubtype?: OpportunitySubtype;
 }
 
 export interface AnalysisContext {
@@ -36,7 +56,9 @@ export interface DetectionRule {
   points: number;
   type: SignalType;
   question?: string;
-  matches: (context: AnalysisContext) => boolean;
+  matches: (
+    context: AnalysisContext,
+  ) => boolean;
 }
 
 export interface Signal {

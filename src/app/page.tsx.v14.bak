@@ -6,22 +6,19 @@ const relatedResources = [
     href: "https://ghostjobs.app/",
   },
   {
-    label: "GhostJobs reports",
+    label: "Ghost Jobs reports",
     href: "https://ghostjobs.net/",
   },
   {
-    label: "GhostJob law tracker",
+    label: "Ghost-job law tracker",
     href: "https://ghostjobtracking.com/",
   },
   {
-    label: "AI resume filtering lawsuit",
-    href: "https://www.jdsupra.com/legalnews/ai-hiring-tools-and-consumer-reports-4231005/",
+    label:
+      "AI hiring credit-report lawsuit",
+    href:
+      "https://www.jdsupra.com/legalnews/ai-hiring-tools-and-consumer-reports-4231005/",
   },
- {
-    label: "Jobs who ghost YOU",
-    href: "https://didtheyghostyou.com/",
-  },
-  
 ];
 
 export default function Home() {
@@ -33,11 +30,10 @@ export default function Home() {
             Job Listing Reality Check
           </h1>
 
-<p className="mt-5 max-w-4xl text-xl font-bold leading-9 text-slate-100 sm:text-2xl">
+          <p className="mt-5 max-w-4xl text-xl font-bold leading-9 text-slate-100 sm:text-2xl">
             Post your job, get a score to
-            rate how realistic it is. 
-            
-            Based on modern trends.
+            rate how realistic it is. Based
+            on modern trends.
           </p>
 
           <nav

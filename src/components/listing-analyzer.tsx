@@ -1,7 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import {
+  type FormEvent,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+
+import ActionPlan from "@/components/action-plan";
+import JobHealthDashboard from "@/components/job-health-dashboard";
+import ReportHistory from "@/components/report-history";
+import ResearchContributionPanel from "@/components/research-contribution-panel";
 
 import VerificationPanel from "@/components/verification-panel";
 
@@ -9,358 +18,721 @@ import {
   analyzeListing,
   type AnalysisInput,
   type AnalysisResult,
-  type ConfidenceLabel,
-  type RiskLabel,
   type Signal,
   type SignalType,
 } from "@/lib/analyze-listing";
+
+import {
+  buildJobHealthProfile,
+  buildNextStepGroups,
+  explainSignal,
+} from "@/lib/presentation";
+
+import type { ReconciliationResult } from "@/lib/reconciliation-types";
+
+import { buildResearchTasks } from "@/lib/research-assistant";
+
+import { analyzeSpecializedProfile } from "@/lib/opportunity-analysis";
+
+import {
+  applySpecializedProfile,
+  mergeSpecializedNextSteps,
+} from "@/lib/specialized-presentation";
+
+import {
+  getOpportunitySubtypeOptions,
+  OPPORTUNITY_TYPE_OPTIONS,
+  type OpportunitySubtype,
+  type OpportunityType,
+} from "@/lib/specialized-analysis-types";
+
+import type { VerificationResult } from "@/lib/verification-types";
 
 const emptyForm: AnalysisInput = {
   company: "",
   listingUrl: "",
   listingText: "",
   recruiterMessage: "",
+  opportunityType: "standard",
+  opportunitySubtype: undefined,
 };
 
-function riskCardClasses(
-  label: RiskLabel | ConfidenceLabel,
+function signalClasses(
+  type: SignalType,
 ): string {
-  switch (label) {
-    case "Critical":
-      return "border-red-300 bg-red-50";
-    case "High":
-      return "border-orange-300 bg-orange-50";
-    case "Moderate":
-      return "border-amber-300 bg-amber-50";
-    default:
-      return "border-emerald-300 bg-emerald-50";
-  }
-}
-
-function signalClasses(type: SignalType): string {
   switch (type) {
     case "critical":
-      return "border-red-300 bg-red-50";
+      return "border-red-700 bg-red-50";
+
     case "warning":
-      return "border-amber-300 bg-amber-50";
+      return "border-amber-500 bg-amber-50";
+
     default:
-      return "border-emerald-300 bg-emerald-50";
+      return "border-emerald-500 bg-emerald-50";
   }
 }
 
-function signalImpactText(signal: Signal): string {
-  if (signal.target === "confidence") {
-    return `+${signal.points} confidence points`;
-  }
+function signalSymbol(
+  type: SignalType,
+): string {
+  switch (type) {
+    case "critical":
+      return "⛔";
 
-  if (signal.target === "ghost") {
-    return `+${signal.points} ghost-risk points`;
-  }
+    case "warning":
+      return "!";
 
-  return `+${signal.points} scam-risk points`;
+    default:
+      return "✓";
+  }
 }
 
-interface RiskCardProps {
-  title: string;
-  score: number;
-  label: RiskLabel | ConfidenceLabel;
-  description: string;
-}
-
-function RiskCard({
-  title,
-  score,
-  label,
-  description,
-}: RiskCardProps) {
+function isCriticalSignal(
+  signal: Signal,
+): boolean {
   return (
-    <section
-      className={`rounded-2xl border p-5 ${riskCardClasses(label)}`}
-      aria-label={`${title}: ${score} out of 100, ${label}`}
+    signal.type === "critical" ||
+    (
+      signal.target === "scam" &&
+      signal.points >= 60
+    )
+  );
+}
+
+function SignalCard({
+  signal,
+}: {
+  signal: Signal;
+}) {
+  const explanation =
+    explainSignal(signal);
+
+  return (
+    <article
+      className={`rounded-3xl border-2 p-5 sm:p-6 ${signalClasses(
+        signal.type,
+      )}`}
     >
-      <p className="text-sm font-semibold uppercase tracking-wide text-slate-600">
-        {title}
-      </p>
+      <div className="flex items-start gap-4">
+        <span
+          aria-hidden="true"
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-current bg-white text-xl font-black"
+        >
+          {signalSymbol(
+            signal.type,
+          )}
+        </span>
 
-      <div className="mt-2 flex items-end gap-2">
-        <span className="text-4xl font-bold text-slate-950">{score}</span>
-        <span className="pb-1 text-sm text-slate-600">out of 100</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-xl font-black leading-7 text-slate-950">
+            {explanation.found}
+          </h3>
+
+          <p className="mt-3 text-base font-black text-slate-700">
+            {explanation.impactText}
+          </p>
+
+          <p className="mt-4 text-base leading-7 text-slate-800">
+            <strong>
+              Why it matters:
+            </strong>{" "}
+            {explanation.whyItMatters}
+          </p>
+        </div>
       </div>
-
-      <p className="mt-2 font-semibold text-slate-900">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-700">{description}</p>
-    </section>
+    </article>
   );
 }
 
 export default function ListingAnalyzer() {
-  const [form, setForm] = useState<AnalysisInput>(emptyForm);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [form, setForm] =
+    useState<AnalysisInput>(
+      emptyForm,
+    );
+
+  const [
+    analysisResult,
+    setAnalysisResult,
+  ] =
+    useState<AnalysisResult | null>(
+      null,
+    );
+
+  const [
+    verificationResult,
+    setVerificationResult,
+  ] =
+    useState<VerificationResult | null>(
+      null,
+    );
+
+  const [
+    reconciliationResult,
+    setReconciliationResult,
+  ] =
+    useState<ReconciliationResult | null>(
+      null,
+    );
+
+  const [
+    verificationRequestId,
+    setVerificationRequestId,
+  ] = useState(0);
+
+  const [
+    formError,
+    setFormError,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const [
+    urlError,
+    setUrlError,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  const opportunityType =
+    form.opportunityType ??
+    "standard";
+
+  const subtypeOptions =
+    getOpportunitySubtypeOptions(
+      opportunityType,
+    );
 
   function updateField(
-  field: keyof AnalysisInput,
-  value: string,
-) {
-  setForm((current: AnalysisInput) => ({
-    ...current,
-    [field]: value,
-  }));
-}
+    field: keyof AnalysisInput,
+    value:
+      AnalysisInput[keyof AnalysisInput],
+  ): void {
+    setForm(
+      (current) => ({
+        ...current,
+        [field]: value,
+      }),
+    );
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (
+      field === "listingUrl"
+    ) {
+      setVerificationRequestId(0);
+      setVerificationResult(null);
+      setReconciliationResult(null);
+      setUrlError(null);
+    }
+  }
+
+  function changeOpportunityType(
+    value: OpportunityType,
+  ): void {
+    setForm(
+      (current) => ({
+        ...current,
+        opportunityType: value,
+        opportunitySubtype:
+          undefined,
+      }),
+    );
+  }
+
+  function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>,
+  ): void {
     event.preventDefault();
 
     if (!form.listingText.trim()) {
+      setFormError(
+        "Paste the job description and any additional context before checking the job.",
+      );
+
       return;
     }
 
-    setResult(analyzeListing(form));
+    setFormError(null);
+
+    setAnalysisResult(
+      analyzeListing({
+        ...form,
+        company:
+          form.company.trim(),
+        listingUrl:
+          form.listingUrl.trim(),
+        listingText:
+          form.listingText.trim(),
+        recruiterMessage:
+          form.recruiterMessage.trim(),
+      }),
+    );
   }
 
-  function loadExample() {
-    const example: AnalysisInput = {
-      company: "Example Consulting Company",
-      listingUrl: "https://example.com/jobs/data-analyst",
-      listingText: `
-        Data Analyst – Future Opportunities
+  function checkUrl(): void {
+    if (
+      !form.listingUrl.trim()
+    ) {
+      setUrlError(
+        "Add a complete public job URL before checking it.",
+      );
 
-        This is an evergreen pipeline requisition for anticipated contract
-        opportunities. Employment may be contingent upon contract award.
+      return;
+    }
 
-        The analyst will support reporting, dashboards, and other duties as
-        assigned. Qualified applicants should have experience with Excel,
-        SQL, and business intelligence tools.
-      `,
-      recruiterMessage: `
-        Contact our recruiter through Telegram today. No interview is required.
-        We will send you a check so that you can purchase equipment from our
-        approved vendor.
-      `,
-    };
+    setUrlError(null);
 
-    setForm(example);
-    setResult(analyzeListing(example));
+    setVerificationRequestId(
+      (current) =>
+        current + 1,
+    );
   }
 
-  function resetForm() {
+  function clearForm(): void {
     setForm(emptyForm);
-    setResult(null);
+    setAnalysisResult(null);
+    setVerificationResult(null);
+    setReconciliationResult(null);
+    setVerificationRequestId(0);
+    setFormError(null);
+    setUrlError(null);
   }
+
+  const handleVerificationChange =
+    useCallback(
+      (
+        verification:
+          VerificationResult | null,
+        reconciliation:
+          ReconciliationResult | null,
+      ): void => {
+        setVerificationResult(
+          verification,
+        );
+
+        setReconciliationResult(
+          reconciliation,
+        );
+      },
+      [],
+    );
+
+  const specializedResult =
+    useMemo(
+      () =>
+        analyzeSpecializedProfile(
+          form,
+        ),
+      [form],
+    );
+
+  const jobHealthProfile =
+    useMemo(() => {
+      if (!analysisResult) {
+        return null;
+      }
+
+      const baseProfile =
+        buildJobHealthProfile(
+          analysisResult,
+          verificationResult,
+          reconciliationResult,
+        );
+
+      return applySpecializedProfile(
+        baseProfile,
+        specializedResult,
+      );
+    }, [
+      analysisResult,
+      verificationResult,
+      reconciliationResult,
+      specializedResult,
+    ]);
+
+  const criticalSignals =
+    useMemo(
+      () =>
+        analysisResult?.signals.filter(
+          isCriticalSignal,
+        ) ?? [],
+      [analysisResult],
+    );
+
+  const warningSignals =
+    useMemo(
+      () =>
+        analysisResult?.signals.filter(
+          (signal) =>
+            !isCriticalSignal(
+              signal,
+            ) &&
+            signal.type !==
+              "positive",
+        ) ?? [],
+      [analysisResult],
+    );
+
+  const nextStepGroups =
+    useMemo(() => {
+      if (!analysisResult) {
+        return [];
+      }
+
+      const baseGroups =
+        buildNextStepGroups(
+          analysisResult,
+          verificationResult,
+          Boolean(
+            form.listingUrl.trim(),
+          ),
+        );
+
+      return mergeSpecializedNextSteps(
+        baseGroups,
+        specializedResult,
+      );
+    }, [
+      analysisResult,
+      verificationResult,
+      form.listingUrl,
+      specializedResult,
+    ]);
 
   return (
     <div className="space-y-8">
       <form
         onSubmit={handleSubmit}
-        className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="rounded-[2rem] border-2 border-slate-300 bg-white p-5 shadow-lg sm:p-8"
       >
-        <div className="grid gap-5 md:grid-cols-2">
-          <label className="block">
-            <span className="font-medium text-slate-900">
-              Company name
-            </span>
-            <span className="ml-2 text-sm text-slate-500">Optional</span>
 
-            <input
-              type="text"
-              value={form.company}
-              onChange={(event) =>
-                updateField("company", event.target.value)
-              }
-              placeholder="Example Company"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-950 outline-none focus:border-slate-900"
-            />
-          </label>
+        <h2 className="mt-2 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+          Add the job information
+        </h2>
 
-          <label className="block">
-            <span className="font-medium text-slate-900">
-              Listing URL
-            </span>
-            <span className="ml-2 text-sm text-slate-500">Optional</span>
-
-            <input
-              type="url"
-              value={form.listingUrl}
-              onChange={(event) =>
-                updateField("listingUrl", event.target.value)
-              }
-              placeholder="https://company.com/careers/job-id"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-950 outline-none focus:border-slate-900"
-            />
-          </label>
-        </div>
-
-        <label className="mt-5 block">
-          <span className="font-medium text-slate-900">
-            Paste the complete job listing
-          </span>
-
-          <textarea
-            required
-            rows={12}
-            value={form.listingText}
-            onChange={(event) =>
-              updateField("listingText", event.target.value)
-            }
-            placeholder="Copy and paste the job description here..."
-            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-950 outline-none focus:border-slate-900"
-          />
-        </label>
-
-        <label className="mt-5 block">
-          <span className="font-medium text-slate-900">
-            Recruiter message
-          </span>
-          <span className="ml-2 text-sm text-slate-500">Optional</span>
-
-          <textarea
-            rows={6}
-            value={form.recruiterMessage}
-            onChange={(event) =>
-              updateField("recruiterMessage", event.target.value)
-            }
-            placeholder="Remove personal information, then paste the recruiter email or message..."
-            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-950 outline-none focus:border-slate-900"
-          />
-        </label>
-
-        <p className="mt-3 text-sm leading-6 text-slate-600">
-          Remove names, phone numbers, home addresses, Social Security
-          numbers, banking details, login information, and other private
-          information before pasting.
+        <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-800">
+          Select the type of opportunity,
+          then paste the information you
+          received.
         </p>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+<label className="mt-6 block space-y-3 mt-8">
+          <span className="text-lg font-black text-slate-950">Company Name</span>
+
+          <input
+            type="text"
+            value={form.company}
+            onChange={(event) =>
+              updateField(
+                "company",
+                event.target.value,
+              )
+            }
+            placeholder="Optional — Acme Health; recruiting agency: Talent Partners"
+            className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+          />
+        </label>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <label className="block">
+            <span className="text-lg font-black text-slate-950">Job Description and any additional context <span aria-hidden="true" className="text-red-700">*</span><span className="sr-only"> required</span></span>
+
+            <textarea
+              value={form.listingText}
+              onChange={(event) =>
+                updateField(
+                  "listingText",
+                  event.target.value,
+                )
+              }
+              placeholder="Required — Paste as much information about the listing as you can find. Include the job title, company, pay, location, schedule, duties, qualifications, benefits, job number, and application instructions."
+              required
+              className="mt-2 min-h-96 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+            />
+          </label>
+
+          <div>
+            
+    <div className="mt-7 grid gap-5 lg:grid-cols-2">
+              <label className="block">
+                <span className="text-lg font-black text-slate-950">
+                  Type of Job
+                </span>
+    
+                <select
+                  value={opportunityType}
+                  onChange={(event) =>
+                    changeOpportunityType(
+                      event.target
+                        .value as OpportunityType,
+                    )
+                  }
+                  className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+                >
+                  {OPPORTUNITY_TYPE_OPTIONS.map(
+                    (option) => (
+                      <option
+                        key={option.value}
+                        value={option.value}
+                      >
+                        {`Optional — ${option.label}`}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+    
+              {subtypeOptions.length >
+                0 && (
+                <label className="block">
+                  <span className="text-lg font-black text-slate-950">
+                    More specific job type
+                  </span>
+    
+                  <span className="mt-1 block text-base text-slate-700">
+                    Optional — Choose the closest match
+                  </span>
+    
+                  <select
+                    value={
+                      form.opportunitySubtype ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      updateField(
+                        "opportunitySubtype",
+                        event.target
+                          .value as OpportunitySubtype,
+                      )
+                    }
+                    className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 bg-white px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+                  >
+                    <option value="">
+                      Select a more specific type
+                    </option>
+    
+                    {subtypeOptions.map(
+                      (option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              )}
+            </div>
+
+            <label className="block space-y-3">
+              <span className="text-lg font-black text-slate-950">Recruiter message</span>
+
+              <textarea
+                value={
+                  form.recruiterMessage
+                }
+                onChange={(event) =>
+                  updateField(
+                    "recruiterMessage",
+                    event.target.value,
+                  )
+                }
+                placeholder="Optional — Paste the recruiter email, text, LinkedIn message, agency name, contact details, interview details, or follow-up answers."
+                className="mt-2 min-h-64 w-full rounded-2xl border-2 border-slate-400 px-4 py-4 text-lg leading-8 text-slate-950 outline-none focus-visible:border-violet-700 focus-visible:ring-4 focus-visible:ring-violet-200"
+              />
+            </label>
+
+            
+
+            <button
+              type="button"
+              onClick={checkUrl}
+              className="mt-3 min-h-14 w-full rounded-2xl border-2 border-blue-800 bg-blue-800 px-6 py-3 text-lg font-black text-white hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-300"
+            >
+              Check URL
+            </button>
+
+            {urlError && (
+              <p
+                role="alert"
+                className="mt-3 rounded-2xl border-2 border-red-700 bg-red-50 p-4 text-base font-bold text-red-950"
+              >
+                ⛔ {urlError}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {formError && (
+          <div
+            role="alert"
+            className="mt-6 rounded-2xl border-4 border-red-700 bg-red-50 p-5 text-lg font-black text-red-950"
+          >
+            ⛔ {formError}
+          </div>
+        )}
+
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <button
             type="submit"
-            disabled={!form.listingText.trim()}
-            className="rounded-xl bg-slate-950 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="min-h-14 w-full rounded-2xl border-2 border-violet-800 bg-violet-800 px-6 py-3 text-lg font-black text-white hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-300 sm:w-auto"
           >
-            Analyze listing
+            Check this job
           </button>
 
           <button
             type="button"
-            onClick={loadExample}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 hover:bg-slate-100"
-          >
-            Load test example
-          </button>
-
-          <button
-            type="button"
-            onClick={resetForm}
-            className="rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-900 hover:bg-slate-100"
+            onClick={clearForm}
+            className="min-h-14 w-full rounded-2xl border-2 border-slate-500 bg-white px-6 py-3 text-lg font-black text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 sm:w-auto"
           >
             Clear
           </button>
         </div>
+
+          <div className="mt-6 space-y-4">
+<label className="mt-6 block">
+              <span className="text-lg font-black text-slate-950">Job URL</span>
+
+              <input
+                type="url"
+                value={form.listingUrl}
+                onChange={(event) =>
+                  updateField(
+                    "listingUrl",
+                    event.target.value,
+                  )
+                }
+                placeholder="Optional, but highly recommended — https://organization.org/careers/job-123"
+                className="mt-2 min-h-14 w-full rounded-2xl border-2 border-slate-400 px-4 py-3 text-lg text-slate-950 outline-none focus-visible:border-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200"
+              />
+            </label>
+
+<VerificationPanel
+        form={form}
+        analysisResult={
+          analysisResult
+        }
+        requestId={
+          verificationRequestId
+        }
+        onVerificationChange={
+          handleVerificationChange
+        }
+      />
+          </div>
       </form>
 
-      <VerificationPanel listingUrl={form.listingUrl} />
+      {analysisResult &&
+  criticalSignals.length > 0 && (
+    <section
+      role="alert"
+      aria-live="assertive"
+      className="rounded-[2rem] border-4 border-red-800 bg-red-950 p-5 text-white shadow-lg sm:p-8"
+    >
+      <h2 className="text-3xl font-black sm:text-4xl">
+        Immediate Danger Warning
+      </h2>
 
-      {result && (
-        <section
-          className="space-y-6"
-          aria-live="polite"
-          aria-label="Job listing analysis results"
-        >
-          <div className="grid gap-4 lg:grid-cols-3">
-            <RiskCard
-              title="Ghost-job risk"
-              score={result.ghostRisk}
-              label={result.ghostLabel}
-              description="Signals that the opening may be inactive, unfunded, evergreen, or intended primarily to collect candidates."
-            />
+      <p className="mt-4 max-w-4xl text-lg font-bold leading-8 text-red-50">
+        Stop before sending money, depositing a check,
+        sharing account credentials, or providing sensitive
+        identity or banking information.
+      </p>
 
-            <RiskCard
-              title="Scam or phishing risk"
-              score={result.scamRisk}
-              label={result.scamLabel}
-              description="Signals involving money, sensitive information, impersonation, suspicious communication, or unsafe recruiting practices."
-            />
-
-            <RiskCard
-              title="Evidence confidence"
-              score={result.confidence}
-              label={result.confidenceLabel}
-              description="How much usable information was supplied. This is not certainty that the listing is legitimate or fraudulent."
-            />
-          </div>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-950">
-              Recommended action
-            </h2>
-
-            <p className="mt-3 leading-7 text-slate-700">
-              {result.recommendation}
-            </p>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-950">
-              Signals detected
-            </h2>
-
-            <div className="mt-4 space-y-3">
-              {result.signals.map((signal) => (
-                <article
-                  key={signal.id}
-                  className={`rounded-2xl border p-4 ${signalClasses(
-                    signal.type,
-                  )}`}
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-semibold text-slate-950">
-                      {signal.title}
-                    </h3>
-
-                    <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-700">
-                        {signalImpactText(signal)}
-                    </span>
-
-
-                  </div>
-
-                  <p className="mt-2 text-sm leading-6 text-slate-700">
-                    {signal.explanation}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-slate-950">
-              Questions to ask
-            </h2>
-
-            <ol className="mt-4 space-y-3">
-              {result.questions.map((question, index) => (
-                <li
-                  key={question}
-                  className="flex gap-3 rounded-xl bg-slate-100 p-4"
-                >
-                  <span className="font-bold text-slate-500">
-                    {index + 1}.
-                  </span>
-                  <span className="text-slate-800">{question}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <div className="flex flex-wrap gap-3 print:hidden">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="rounded-xl bg-slate-950 px-5 py-3 font-semibold text-white hover:bg-slate-800"
+      <ul className="mt-5 space-y-3">
+        {criticalSignals.map(
+          (signal) => (
+            <li
+              key={signal.id}
+              className="rounded-2xl border-2 border-red-300 bg-white p-4 text-slate-950"
             >
-              Print results
-            </button>
+              <p className="text-lg font-black">
+                {signal.title}
+              </p>
+
+              <p className="mt-2 text-base leading-7">
+                {signal.explanation}
+              </p>
+            </li>
+          ),
+        )}
+      </ul>
+    </section>
+  )}
+
+      {jobHealthProfile && (
+        <>
+          <JobHealthDashboard
+            profile={
+              jobHealthProfile
+            }
+          />
+
+          <section
+          role="alert"
+          className="rounded-[2rem] border-4 border-red-700 bg-red-50 p-5 shadow-lg sm:p-8"
+        >
+          <p className="text-base font-black uppercase tracking-widest text-red-800">
+            Immediate danger warning
+          </p>
+
+          <h2 className="mt-2 text-3xl font-black leading-tight text-red-950">
+            Stop before sending money or
+            personal information
+          </h2>
+
+          <div className="mt-6 space-y-5">
+            {criticalSignals.map(
+              (signal) => (
+                <SignalCard
+                  key={signal.id}
+                  signal={signal}
+                />
+              ),
+            )}
           </div>
         </section>
+
+          <ActionPlan
+            groups={nextStepGroups}
+            warningSignals={warningSignals}
+            specializedResult={specializedResult}
+            researchTasks={buildResearchTasks(
+              form,
+              analysisResult,
+              verificationResult,
+              reconciliationResult,
+            )}
+          />
+        </>
       )}
+
+      <ResearchContributionPanel
+        form={form}
+        analysisResult={analysisResult}
+        profile={jobHealthProfile}
+        verificationAttempted={
+          verificationResult !== null
+        }
+        reconciliationAvailable={
+          reconciliationResult !== null
+        }
+      />
+      <ReportHistory
+        form={form}
+        analysisResult={
+          analysisResult
+        }
+        verificationResult={
+          verificationResult
+        }
+        reconciliationResult={
+          reconciliationResult
+        }
+      />
     </div>
   );
 }
