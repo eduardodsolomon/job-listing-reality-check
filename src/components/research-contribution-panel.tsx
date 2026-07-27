@@ -129,6 +129,10 @@ export default function ResearchContributionPanel({
   }
 
   function queueContribution(): void {
+    if (!preview) {
+      return;
+    }
+
     if (!consent) {
       setStatus(
         "Review the preview and check the consent box first.",
@@ -155,6 +159,10 @@ export default function ResearchContributionPanel({
   }
 
   function downloadReceipt(): void {
+    if (!preview) {
+      return;
+    }
+
     if (!consent) {
       setStatus(
         "Check the consent box before downloading a consent receipt.",
@@ -189,6 +197,10 @@ export default function ResearchContributionPanel({
   }
 
   function clearQueue(): void {
+    if (!preview) {
+      return;
+    }
+
     clearResearchContributions();
     setQueue([]);
     setStatus(

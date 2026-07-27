@@ -417,7 +417,7 @@ export default function ListingAnalyzer() {
           received.
         </p>
 
-<label className="mt-6 block">
+<label className="mt-6 block space-y-3 mt-8">
           <span className="text-lg font-black text-slate-950">Company Name</span>
 
           <input
@@ -527,7 +527,7 @@ export default function ListingAnalyzer() {
               )}
             </div>
 
-            <label className="block">
+            <label className="block space-y-3">
               <span className="text-lg font-black text-slate-950">Recruiter message</span>
 
               <textarea
