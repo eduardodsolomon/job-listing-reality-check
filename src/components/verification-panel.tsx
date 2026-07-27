@@ -1,6 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import type {
+  AnalysisInput,
+  AnalysisResult,
+} from "@/lib/analyze-listing";
+
+import { reconcileVerification } from "@/lib/reconcile-verification";
+
+import type {
+  ComparisonStatus,
+  ReconciliationResult,
+} from "@/lib/reconciliation-types";
 
 import type {
   EvidenceKind,
@@ -11,7 +27,8 @@ import type {
 } from "@/lib/verification-types";
 
 interface VerificationPanelProps {
-  listingUrl: string;
+  form: AnalysisInput;
+  analysisResult: AnalysisResult | null;
 }
 
 function statusLabel(
@@ -59,6 +76,36 @@ function evidenceClasses(
   }
 }
 
+function comparisonClasses(
+  status: ComparisonStatus,
+): string {
+  switch (status) {
+    case "match":
+      return "border-emerald-200 bg-emerald-50";
+    case "partial":
+      return "border-blue-200 bg-blue-50";
+    case "mismatch":
+      return "border-red-200 bg-red-50";
+    default:
+      return "border-slate-200 bg-slate-50";
+  }
+}
+
+function comparisonLabel(
+  status: ComparisonStatus,
+): string {
+  switch (status) {
+    case "match":
+      return "Match";
+    case "partial":
+      return "Partial match";
+    case "mismatch":
+      return "Mismatch";
+    default:
+      return "Not established";
+  }
+}
+
 function providerLabel(
   provider: VerificationProvider,
 ): string {
@@ -72,11 +119,116 @@ function providerLabel(
   }
 }
 
+function adjustmentText(
+  adjustment: number,
+): string {
+  if (adjustment > 0) {
+    return `+${adjustment}`;
+  }
+
+  return String(adjustment);
+}
+
+function ReconciliationSection({
+  reconciliation,
+}: {
+  reconciliation: ReconciliationResult;
+}) {
+  return (
+    <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+      <p className="text-sm font-semibold uppercase tracking-wide text-violet-800">
+        Verification-adjusted confidence
+      </p>
+
+      <div className="mt-3 flex flex-wrap items-end gap-4">
+        <div>
+          <p className="text-4xl font-bold text-slate-950">
+            {reconciliation.adjustedConfidence}
+          </p>
+
+          <p className="text-sm font-semibold text-slate-700">
+            {
+              reconciliation.adjustedConfidenceLabel
+            } confidence
+          </p>
+        </div>
+
+        <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-violet-900">
+          {adjustmentText(
+            reconciliation.adjustment,
+          )}{" "}
+          verification adjustment
+        </div>
+      </div>
+
+      <p className="mt-4 text-sm leading-6 text-slate-700">
+        {reconciliation.summary}
+      </p>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {reconciliation.comparisons.map(
+          (item) => (
+            <article
+              key={item.field}
+              className={`rounded-xl border p-4 ${comparisonClasses(
+                item.status,
+              )}`}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <h4 className="font-bold text-slate-950">
+                  {item.label}
+                </h4>
+
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700">
+                  {comparisonLabel(
+                    item.status,
+                  )}
+                </span>
+              </div>
+
+              {item.submittedValue && (
+                <p className="mt-3 break-words text-sm text-slate-700">
+                  <strong>Submitted:</strong>{" "}
+                  {item.submittedValue}
+                </p>
+              )}
+
+              {item.verifiedValue && (
+                <p className="mt-2 break-words text-sm text-slate-700">
+                  <strong>Verified:</strong>{" "}
+                  {item.verifiedValue}
+                </p>
+              )}
+
+              <p className="mt-3 text-sm leading-6 text-slate-700">
+                {item.explanation}
+              </p>
+
+              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-600">
+                {adjustmentText(
+                  item.adjustment,
+                )}{" "}
+                confidence points
+              </p>
+            </article>
+          ),
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function VerificationPanel({
-  listingUrl,
+  form,
+  analysisResult,
 }: VerificationPanelProps) {
+  const listingUrl =
+    form.listingUrl;
+
   const [result, setResult] =
-    useState<VerificationResult | null>(null);
+    useState<VerificationResult | null>(
+      null,
+    );
 
   const [error, setError] =
     useState<string | null>(null);
@@ -89,8 +241,21 @@ export default function VerificationPanel({
     setError(null);
   }, [listingUrl]);
 
+  const reconciliation = useMemo(() => {
+    if (!result || !analysisResult) {
+      return null;
+    }
+
+    return reconcileVerification(
+      form,
+      analysisResult,
+      result,
+    );
+  }, [form, analysisResult, result]);
+
   async function runVerification() {
-    const normalizedUrl = listingUrl.trim();
+    const normalizedUrl =
+      listingUrl.trim();
 
     if (!normalizedUrl) {
       setError(
@@ -105,15 +270,19 @@ export default function VerificationPanel({
     setResult(null);
 
     try {
-      const response = await fetch("/api/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "/api/verify",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            listingUrl: normalizedUrl,
+          }),
         },
-        body: JSON.stringify({
-          listingUrl: normalizedUrl,
-        }),
-      });
+      );
 
       const payload =
         (await response.json()) as VerificationApiResponse;
@@ -150,10 +319,12 @@ export default function VerificationPanel({
           </h2>
 
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Check whether the submitted URL currently returns a
-            public posting. Greenhouse and Lever listings receive
-            posting-ID verification. Other sites receive a limited
-            page and structured-data check.
+            Check whether the submitted URL
+            currently returns a public posting.
+            Greenhouse and Lever listings receive
+            posting-ID verification. Other sites
+            receive a limited page and
+            structured-data check.
           </p>
         </div>
 
@@ -174,8 +345,8 @@ export default function VerificationPanel({
 
       {!listingUrl.trim() && (
         <p className="mt-5 rounded-xl bg-slate-100 p-4 text-sm text-slate-700">
-          Add a public listing URL in the form above to use this
-          check.
+          Add a public listing URL in the form
+          above to use this check.
         </p>
       )}
 
@@ -206,7 +377,9 @@ export default function VerificationPanel({
             </p>
 
             <h3 className="mt-2 text-xl font-bold text-slate-950">
-              {statusLabel(result.status)}
+              {statusLabel(
+                result.status,
+              )}
             </h3>
 
             <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
@@ -216,7 +389,9 @@ export default function VerificationPanel({
                 </dt>
 
                 <dd className="mt-1 text-slate-950">
-                  {providerLabel(result.provider)}
+                  {providerLabel(
+                    result.provider,
+                  )}
                 </dd>
               </div>
 
@@ -238,7 +413,8 @@ export default function VerificationPanel({
                 </dt>
 
                 <dd className="mt-1 text-slate-950">
-                  {result.listingActive === null
+                  {result.listingActive ===
+                  null
                     ? "Unknown"
                     : result.listingActive
                       ? "Appears active"
@@ -301,31 +477,9 @@ export default function VerificationPanel({
                   </dt>
 
                   <dd className="mt-1 break-all text-slate-950">
-                    {result.requisitionId}
-                  </dd>
-                </div>
-              )}
-
-              {result.datePosted && (
-                <div>
-                  <dt className="font-semibold text-slate-600">
-                    Date posted
-                  </dt>
-
-                  <dd className="mt-1 text-slate-950">
-                    {result.datePosted}
-                  </dd>
-                </div>
-              )}
-
-              {result.validThrough && (
-                <div>
-                  <dt className="font-semibold text-slate-600">
-                    Valid through
-                  </dt>
-
-                  <dd className="mt-1 text-slate-950">
-                    {result.validThrough}
+                    {
+                      result.requisitionId
+                    }
                   </dd>
                 </div>
               )}
@@ -370,6 +524,22 @@ export default function VerificationPanel({
               )}
             </div>
           </div>
+
+          {analysisResult ? (
+            reconciliation && (
+              <ReconciliationSection
+                reconciliation={
+                  reconciliation
+                }
+              />
+            )
+          ) : (
+            <p className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-950">
+              Run the text analysis to calculate
+              a verification-adjusted confidence
+              score.
+            </p>
+          )}
 
           {result.warnings.length > 0 && (
             <div>

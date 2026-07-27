@@ -256,7 +256,10 @@ export default function ListingAnalyzer() {
         </div>
       </form>
 
-      <VerificationPanel listingUrl={form.listingUrl} />
+        <VerificationPanel
+        form={form}
+        analysisResult={result}
+        />
 
       {result && (
         <section
