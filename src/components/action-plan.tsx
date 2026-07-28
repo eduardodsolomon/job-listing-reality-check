@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import PointBadge from "@/components/point-badge";
 
 import type {
@@ -368,7 +370,7 @@ export default function ActionPlan({
   return (
     <section className="rounded-[2rem] border-2 border-slate-400 bg-white p-5 shadow-lg sm:p-8">
       <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
-        Next Steps
+        {UI_COPY.app.nextSteps}
       </h2>
 
       <p className="mt-3 max-w-4xl text-lg leading-8 text-slate-800">

@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   useEffect,
   useMemo,
@@ -42,7 +45,7 @@ function metricDescriptor(
   }
 
   if (score >= 30) {
-    return "Concerning";
+    return UI_COPY.jobHealth.concerning;
   }
 
   return "Critical";
@@ -224,7 +227,7 @@ export default function TrendsDashboard() {
   const scoreCards = [
     {
       id: "sanity",
-      title: "Sanity Score",
+      title: UI_COPY.scores.overall,
       metric:
         summary.scores
           .sanityScore,
@@ -233,7 +236,7 @@ export default function TrendsDashboard() {
     },
     {
       id: "listing",
-      title: "Listing Quality",
+      title: UI_COPY.scores.listingQuality,
       metric:
         summary.scores
           .listingQuality,
@@ -242,7 +245,7 @@ export default function TrendsDashboard() {
     },
     {
       id: "safety",
-      title: "Personal Safety",
+      title: UI_COPY.scores.personalSafety,
       metric:
         summary.scores
           .personalSafety,
@@ -251,7 +254,7 @@ export default function TrendsDashboard() {
     },
     {
       id: "evidence",
-      title: "Evidence Quality",
+      title: UI_COPY.scores.evidenceQuality,
       metric:
         summary.scores
           .evidenceQuality,
@@ -266,7 +269,7 @@ export default function TrendsDashboard() {
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.18em] text-violet-800">
-              Version 13
+              {UI_COPY.sectionLabels.aggregateInsights}
             </p>
 
             <h2 className="mt-2 text-3xl font-black text-slate-950 sm:text-4xl">

@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import JobRealityWorkspace from "@/components/job-reality-workspace";
 
 const relatedResources = [
@@ -30,7 +32,7 @@ export default function Home() {
       <div className="mx-auto max-w-7xl">
         <header className="rounded-[2rem] border-2 border-slate-800 bg-slate-950 p-6 text-white shadow-lg sm:p-10">
           <h1 className="text-4xl font-black leading-tight text-white sm:text-6xl">
-            Job Listing Reality Check
+            {UI_COPY.app.name}
           </h1>
 
 <p className="mt-5 max-w-4xl text-xl font-bold leading-9 text-slate-100 sm:text-2xl">

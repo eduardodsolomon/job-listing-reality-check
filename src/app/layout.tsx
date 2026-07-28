@@ -1,9 +1,11 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import type { Metadata } from "next";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Job Listing Reality Check",
+  title: UI_COPY.app.name,
   description:
     "An explainable screening tool for ghost-job, scam, and phishing warning signs.",
 };

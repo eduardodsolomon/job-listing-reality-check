@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import type {
   AnalysisInput,
   AnalysisResult,
@@ -171,7 +173,7 @@ function activeStatusComparison(
       field: "active-status",
       label: "Active posting status",
       status: "match",
-      verifiedValue: "Appears active",
+      verifiedValue: UI_COPY.urlVerification.activity.active,
       explanation:
         "The public source returned an active posting record.",
       adjustment: 12,
@@ -194,7 +196,7 @@ function activeStatusComparison(
     field: "active-status",
     label: "Active posting status",
     status: "unknown",
-    verifiedValue: "Unknown",
+    verifiedValue: UI_COPY.common.unknown,
     explanation:
       "The page was reachable, but its active status could not be established.",
     adjustment: 0,

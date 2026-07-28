@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import {
   describe,
   expect,
@@ -21,7 +23,7 @@ const groups: NextStepGroup[] = [
   {
     id: "gather-information",
     title:
-      "Gather more information",
+      UI_COPY.nextSteps.gatherInformation,
     summary:
       "Find missing information.",
     items: [

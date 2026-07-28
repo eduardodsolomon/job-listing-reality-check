@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   useEffect,
   useMemo,
@@ -217,7 +220,7 @@ export default function ResearchContributionPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.18em] text-violet-800">
-            Version 12
+            {UI_COPY.sectionLabels.researchParticipation}
           </p>
 
           <h2 className="mt-2 text-3xl font-black text-slate-950 sm:text-4xl">
@@ -230,7 +233,7 @@ export default function ResearchContributionPanel({
         </div>
 
         <div className="rounded-2xl border-2 border-emerald-700 bg-emerald-50 px-4 py-3 text-base font-black text-emerald-950">
-          Local only
+          {UI_COPY.workspace.localOnly}
         </div>
       </div>
 
@@ -383,7 +386,7 @@ export default function ResearchContributionPanel({
                         record.createdAt,
                       ).toLocaleString()}
                       {" · "}
-                      Sanity Score {record.sanityScore ?? "unavailable"}
+                      {UI_COPY.scores.overall} {record.sanityScore ?? "unavailable"}
                     </p>
                   </div>
 

@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   type ChangeEvent,
   useEffect,
@@ -102,7 +105,7 @@ export default function WorkspaceProfilePanel() {
 
   const [status, setStatus] =
     useState(
-      "This workspace is stored only in this browser.",
+      UI_COPY.workspace.storedInBrowser,
     );
 
   const [
@@ -143,7 +146,7 @@ export default function WorkspaceProfilePanel() {
 
     setProfile(updated);
     setStatus(
-      "Local workspace profile saved.",
+      UI_COPY.workspace.profileSaved,
     );
   }
 
@@ -164,7 +167,7 @@ export default function WorkspaceProfilePanel() {
     );
 
     setStatus(
-      "Workspace bundle downloaded. It may contain saved job descriptions, so store it securely.",
+      UI_COPY.workspace.bundleDownloaded,
     );
   }
 
@@ -193,14 +196,14 @@ export default function WorkspaceProfilePanel() {
 
       setStatus(
         isWorkspaceBundle(parsed)
-          ? "Valid workspace bundle selected. Review the warning before importing."
-          : "That file is not a valid Job Listing Reality Check workspace bundle.",
+          ? UI_COPY.workspace.validBundle
+          : UI_COPY.workspace.invalidBundle,
       );
     } catch {
       setPendingBundle(null);
       setImportReady(false);
       setStatus(
-        "The selected file could not be read as JSON.",
+        UI_COPY.workspace.unreadableBundle,
       );
     }
   }
@@ -222,7 +225,7 @@ export default function WorkspaceProfilePanel() {
       );
 
     setStatus(
-      `Imported ${imported} local workspace records. Reloading the page.`,
+      UI_COPY.workspace.importedRecords(imported),
     );
 
     window.location.reload();
@@ -246,7 +249,7 @@ export default function WorkspaceProfilePanel() {
     setProfile(replacement);
     setDisplayName("");
     setStatus(
-      "The local profile name was removed. Saved reports and research records were not deleted.",
+      UI_COPY.workspace.profileNameRemoved,
     );
   }
 
@@ -258,14 +261,14 @@ export default function WorkspaceProfilePanel() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.16em] text-violet-800">
-            Version 14
+            {UI_COPY.sectionLabels.localWorkspace}
           </p>
 
           <h2
             id="workspace-profile-heading"
             className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl"
           >
-            Local workspace profile
+            {UI_COPY.workspace.heading}
           </h2>
 
           <p className="mt-3 max-w-3xl text-base leading-7 text-slate-700">
@@ -277,7 +280,7 @@ export default function WorkspaceProfilePanel() {
         </div>
 
         <span className="w-fit rounded-full border-2 border-slate-700 bg-slate-100 px-4 py-2 text-sm font-black text-slate-950">
-          Local only
+          {UI_COPY.workspace.localOnly}
         </span>
       </div>
 
@@ -285,7 +288,7 @@ export default function WorkspaceProfilePanel() {
         <div className="rounded-2xl border-2 border-slate-300 bg-slate-50 p-5">
           <label className="block space-y-2">
             <span className="block text-lg font-black text-slate-950">
-              Workspace name
+              {UI_COPY.workspace.workspaceName}
             </span>
 
             <input
@@ -303,7 +306,7 @@ export default function WorkspaceProfilePanel() {
           <p className="mt-3 break-all text-sm text-slate-600">
             Workspace ID:{" "}
             {profile?.workspaceId ??
-              "Loading"}
+              UI_COPY.common.loading}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -313,7 +316,7 @@ export default function WorkspaceProfilePanel() {
               disabled={!profile}
               className="min-h-12 rounded-xl bg-violet-800 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save profile
+              {UI_COPY.workspace.saveProfile}
             </button>
 
             <button
@@ -322,14 +325,14 @@ export default function WorkspaceProfilePanel() {
               disabled={!profile}
               className="min-h-12 rounded-xl border-2 border-slate-600 bg-white px-5 py-3 font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Remove profile name
+              {UI_COPY.workspace.removeProfileName}
             </button>
           </div>
         </div>
 
         <div className="rounded-2xl border-2 border-amber-500 bg-amber-50 p-5">
           <h3 className="text-xl font-black text-slate-950">
-            Transfer this workspace
+            {UI_COPY.workspace.transferWorkspace}
           </h3>
 
           <p className="mt-3 text-base leading-7 text-slate-800">
@@ -346,11 +349,11 @@ export default function WorkspaceProfilePanel() {
               disabled={!profile}
               className="min-h-12 rounded-xl bg-slate-950 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Export workspace
+              {UI_COPY.workspace.exportWorkspace}
             </button>
 
             <label className="min-h-12 cursor-pointer rounded-xl border-2 border-slate-700 bg-white px-5 py-3 font-black text-slate-950">
-              Select workspace file
+              {UI_COPY.workspace.selectWorkspaceFile}
               <input
                 type="file"
                 accept="application/json,.json"
@@ -365,7 +368,7 @@ export default function WorkspaceProfilePanel() {
               disabled={!importReady}
               className="min-h-12 rounded-xl bg-violet-800 px-5 py-3 font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Import selected workspace
+              {UI_COPY.workspace.importWorkspace}
             </button>
           </div>
         </div>

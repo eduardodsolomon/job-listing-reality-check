@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import type {
   SpecializedAnalysisResult,
   SpecializedFinding,
@@ -53,8 +55,8 @@ function targetLabel(
 ): string {
   return finding.target ===
     "listing-quality"
-    ? "Listing quality"
-    : "Personal safety";
+    ? UI_COPY.scores.listingQuality
+    : UI_COPY.scores.personalSafety;
 }
 
 function adjustmentClasses(

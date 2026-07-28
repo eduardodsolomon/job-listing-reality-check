@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import type {
   HealthBand,
   JobHealthMetric,
@@ -134,7 +136,7 @@ export default function JobHealthDashboard({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-3xl font-black text-slate-950 sm:text-4xl">
-            Sanity Score
+            {UI_COPY.scores.overall}
           </h2>
 
           <p className="mt-3 max-w-3xl text-lg leading-8 text-slate-800">
@@ -199,7 +201,7 @@ export default function JobHealthDashboard({
 
       <details className="mt-7 rounded-3xl border-2 border-slate-500 bg-slate-50 p-5">
         <summary className="cursor-pointer text-xl font-black text-slate-950">
-          Final Scoring Receipt
+          {UI_COPY.app.scoringReceipt}
         </summary>
 
         <div className="mt-5 space-y-4">

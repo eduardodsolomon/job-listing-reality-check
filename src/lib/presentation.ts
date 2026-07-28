@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import type {
   AnalysisResult,
   Signal,
@@ -197,22 +199,22 @@ export function healthLabelForScore(
     healthBandForScore(score)
   ) {
     case "excellent":
-      return "Excellent";
+      return UI_COPY.jobHealth.excellent;
 
     case "good":
-      return "Good";
+      return UI_COPY.jobHealth.good;
 
     case "fair":
-      return "Needs review";
+      return UI_COPY.jobHealth.needsReview;
 
     case "poor":
-      return "Concerning";
+      return UI_COPY.jobHealth.concerning;
 
     case "critical":
-      return "Serious danger";
+      return UI_COPY.jobHealth.seriousDanger;
 
     default:
-      return "Not enough information";
+      return UI_COPY.jobHealth.notEnoughInformation;
   }
 }
 
@@ -889,7 +891,7 @@ export function buildJobHealthProfile(
     JobHealthMetric[] = [
     createMetric({
       id: "listing-quality",
-      label: "Listing quality",
+      label: UI_COPY.scores.listingQuality,
       score: listingQuality,
       explanation:
         "How complete and current the job appears. This includes pay, job number, detail, funding, and signs that the employer is actively hiring.",
@@ -897,7 +899,7 @@ export function buildJobHealthProfile(
 
     createMetric({
       id: "personal-safety",
-      label: "Personal safety",
+      label: UI_COPY.scores.personalSafety,
       score: personalSafety,
       explanation:
         "How safely the recruiter handles money, personal information, interviews, communication, and onboarding.",
@@ -905,7 +907,7 @@ export function buildJobHealthProfile(
 
     createMetric({
       id: "evidence-quality",
-      label: "Evidence quality",
+      label: UI_COPY.scores.evidenceQuality,
       score: evidenceQuality,
       explanation:
         evidenceQuality === null
@@ -1048,7 +1050,7 @@ export function buildNextStepGroups(
     {
       id: "gather-information",
       title:
-        "Gather more information",
+        UI_COPY.nextSteps.gatherInformation,
       summary:
         "Find missing details, paste them into the form, and run the check again.",
       items: gatherItems,

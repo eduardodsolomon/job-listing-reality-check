@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   type FormEvent,
   useCallback,
@@ -418,7 +421,7 @@ export default function ListingAnalyzer() {
         </p>
 
 <label className="mt-6 block space-y-3 mt-8">
-          <span className="text-lg font-black text-slate-950">Company Name</span>
+          <span className="text-lg font-black text-slate-950">{UI_COPY.form.company}</span>
 
           <input
             type="text"
@@ -457,7 +460,7 @@ export default function ListingAnalyzer() {
     <div className="mt-7 grid gap-5 lg:grid-cols-2">
               <label className="block">
                 <span className="text-lg font-black text-slate-950">
-                  Type of Job
+                  {UI_COPY.form.jobType}
                 </span>
     
                 <select
@@ -528,7 +531,7 @@ export default function ListingAnalyzer() {
             </div>
 
             <label className="block space-y-3">
-              <span className="text-lg font-black text-slate-950">Recruiter message</span>
+              <span className="text-lg font-black text-slate-950">{UI_COPY.form.recruiterMessage}</span>
 
               <textarea
                 value={
@@ -580,7 +583,7 @@ export default function ListingAnalyzer() {
             type="submit"
             className="min-h-14 w-full rounded-2xl border-2 border-violet-800 bg-violet-800 px-6 py-3 text-lg font-black text-white hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-violet-300 sm:w-auto"
           >
-            Check this job
+            {UI_COPY.app.checkJob}
           </button>
 
           <button
@@ -588,13 +591,13 @@ export default function ListingAnalyzer() {
             onClick={clearForm}
             className="min-h-14 w-full rounded-2xl border-2 border-slate-500 bg-white px-6 py-3 text-lg font-black text-slate-900 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 sm:w-auto"
           >
-            Clear
+            {UI_COPY.app.clear}
           </button>
         </div>
 
           <div className="mt-6 space-y-4">
 <label className="mt-6 block">
-              <span className="text-lg font-black text-slate-950">Job URL</span>
+              <span className="text-lg font-black text-slate-950">{UI_COPY.form.jobUrl}</span>
 
               <input
                 type="url"
@@ -633,7 +636,7 @@ export default function ListingAnalyzer() {
       className="rounded-[2rem] border-4 border-red-800 bg-red-950 p-5 text-white shadow-lg sm:p-8"
     >
       <h2 className="text-3xl font-black sm:text-4xl">
-        Immediate Danger Warning
+        {UI_COPY.app.immediateDangerWarning}
       </h2>
 
       <p className="mt-4 max-w-4xl text-lg font-bold leading-8 text-red-50">

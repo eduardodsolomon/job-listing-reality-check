@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   type ChangeEvent,
   useMemo,
@@ -538,7 +541,7 @@ export default function BatchAnalyzer() {
                         )}`}
                       >
                         <p className="text-sm font-black uppercase tracking-wide">
-                          Sanity Score
+                          {UI_COPY.scores.overall}
                         </p>
 
                         <p className="text-4xl font-black">

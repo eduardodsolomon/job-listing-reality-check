@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { UI_COPY } from "../content/ui-copy";
 import {
   useEffect,
   useMemo,
@@ -355,7 +358,7 @@ export default function ReportHistory({
 
       {savedReports.length === 0 ? (
         <p className="mt-5 rounded-2xl border-2 border-dashed border-slate-400 p-8 text-center text-lg font-bold text-slate-700">
-          No saved reports yet
+          {UI_COPY.savedReports.noSavedReports}
         </p>
       ) : (
         <div className="mt-6 space-y-5">

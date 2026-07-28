@@ -1,3 +1,5 @@
+import { UI_COPY } from "../content/ui-copy";
+
 import {
   describe,
   expect,
@@ -163,7 +165,7 @@ describe("job health presentation", () => {
             "Active posting status",
           status: "match",
           verifiedValue:
-            "Appears active",
+            UI_COPY.urlVerification.activity.active,
           explanation:
             "The public source returned an active posting record.",
           adjustment: 12,
