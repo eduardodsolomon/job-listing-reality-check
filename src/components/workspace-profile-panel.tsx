@@ -104,7 +104,7 @@ export default function WorkspaceProfilePanel() {
   ] = useState("");
 
   const [status, setStatus] =
-    useState(
+    useState<string>(
       UI_COPY.workspace.storedInBrowser,
     );
 
